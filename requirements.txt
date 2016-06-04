@@ -1,0 +1,8 @@
+ConfigSpace
+numpy
+scipy
+scikit-learn
+pyyaml
+liac-arff
+pandas
+smac
