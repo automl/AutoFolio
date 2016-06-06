@@ -167,7 +167,8 @@ class ASlibScenario(object):
         if self.algorithms_stochastic is None:
             self.algorithms_stochastic = set()
         self.feature_group_dict = description.get('feature_steps')
-        self.feature_steps = description.get('default_steps')
+        self.feature_steps = self.feature_group_dict.keys() 
+        self.feature_steps_default = description.get('default_steps')
 
         for step, d in self.feature_group_dict.items():
             if d.get("requires") and not isinstance(d["requires"], list):
