@@ -12,6 +12,9 @@ from autofolio.data.aslib_scenario import ASlibScenario
 from autofolio.feature_preprocessing.pca import PCAWrapper
 from autofolio.feature_preprocessing.missing_values import ImputerWrapper
 
+#classifiers
+from autofolio.selector.classifiers.random_forest import RandomForest
+
 __author__= "Marius Lindauer"
 __license__ = "BSD"
 __version__ = "2.0.0"
@@ -53,9 +56,12 @@ class AutoFolio(object):
         PCAWrapper.add_params(self.cs)
         ImputerWrapper.add_params(self.cs)
         
+        #classifiers
+        RandomForest.add_params(self.cs)
+        
         return self.cs
         
-    def feature_preprocessing(self, scenario, config:Configuration):
+    def feature_preprocessing(self, scenario:ASlibScenario, config:Configuration):
         '''
             performs feature preprocessing on a given ASlib scenario wrt to a given configuration
         '''
@@ -65,6 +71,12 @@ class AutoFolio(object):
         
         pca = PCAWrapper()
         scenario = pca.fit_transform(scenario, config)
+        
+    def fit_selector(self, scenario:ASlibScenario, config:Configuration):
+        '''
+            fits an algorithm selector for a given scenario wrt a given configuration
+        '''
+        
         
         
         

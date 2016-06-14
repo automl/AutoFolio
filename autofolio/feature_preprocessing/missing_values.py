@@ -5,15 +5,18 @@ from sklearn.preprocessing import Imputer
 
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
     UniformFloatHyperparameter, UniformIntegerHyperparameter
+from ConfigSpace import Configuration  
+from ConfigSpace.configuration_space import ConfigurationSpace
+
+from autofolio.data.aslib_scenario import ASlibScenario
 
 __author__ = "Marius Lindauer"
 __license__ = "BSD"
 
-
 class ImputerWrapper(object):
 
     @staticmethod
-    def add_params(cs):
+    def add_params(cs:ConfigurationSpace):
         '''
             adds parameters to ConfigurationSpace 
         '''
@@ -27,7 +30,7 @@ class ImputerWrapper(object):
         '''
         self.imputer = None
 
-    def fit(self, scenario, config):
+    def fit(self, scenario:ASlibScenario, config:Configuration):
         '''
             fit pca object to ASlib scenario data
 
@@ -42,7 +45,7 @@ class ImputerWrapper(object):
         self.imputer = Imputer(strategy=config.get("imputer_strategy"))
         self.imputer.fit(scenario.feature_data.values)
 
-    def transform(self, scenario):
+    def transform(self, scenario:ASlibScenario):
         '''
             transform ASLib scenario data
 
@@ -62,7 +65,7 @@ class ImputerWrapper(object):
 
         return scenario
 
-    def fit_transform(self, scenario, config):
+    def fit_transform(self, scenario:ASlibScenario, config:Configuration):
         '''
             fit and transform
 

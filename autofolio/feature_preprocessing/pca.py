@@ -6,6 +6,10 @@ from sklearn.decomposition import PCA
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
     UniformFloatHyperparameter, UniformIntegerHyperparameter
 from ConfigSpace.conditions import EqualsCondition, InCondition
+from ConfigSpace.configuration_space import ConfigurationSpace
+from ConfigSpace import Configuration  
+
+from autofolio.data.aslib_scenario import ASlibScenario
 
 __author__ = "Marius Lindauer"
 __license__ = "BSD"
@@ -14,7 +18,7 @@ __license__ = "BSD"
 class PCAWrapper(object):
 
     @staticmethod
-    def add_params(cs):
+    def add_params(cs:ConfigurationSpace):
         '''
             adds parameters to ConfigurationSpace 
         '''
@@ -33,7 +37,7 @@ class PCAWrapper(object):
         '''
         self.pca = None
 
-    def fit(self, scenario, config):
+    def fit(self, scenario:ASlibScenario, config:Configuration):
         '''
             fit pca object to ASlib scenario data
             
@@ -49,7 +53,7 @@ class PCAWrapper(object):
             self.pca = PCA(n_components=config.get("pca_n_components"))
             self.pca.fit(scenario.feature_data.values)
 
-    def transform(self, scenario):
+    def transform(self, scenario:ASlibScenario):
         '''
             transform ASLib scenario data
 
@@ -71,7 +75,7 @@ class PCAWrapper(object):
             
         return scenario
     
-    def fit_transform(self, scenario, config):
+    def fit_transform(self, scenario:ASlibScenario, config:Configuration):
         '''
             fit and transform
             
