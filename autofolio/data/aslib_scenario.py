@@ -6,6 +6,7 @@ import logging
 import yaml
 import functools
 import arff  # liac-arff
+import copy
 
 __author__ = "Marius Lindauer"
 __version__ = "2.0.0"
@@ -602,5 +603,21 @@ class ASlibScenario(object):
                 sys.exit(3)
                 
                 
-                
+    def get_split(self, indx=1):
+        '''
+            returns a copy of self but only with the data of the i-th cross validation split according to cv.arff
+            
+            Arguments
+                indx : int
+                    indx of the cv split (should be in most cases within [1,10]
+        '''
+        
+        if not self.cv_data:
+            raise ValueError("The ASlib scenario has not provided any cv.arff -- cannot get split data")
+        
+        new_scen = copy.deepcopy(self)
+        
+        
+        
+        
             

@@ -3,6 +3,7 @@ import pandas as pd
 
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
     UniformFloatHyperparameter, UniformIntegerHyperparameter
+from ConfigSpace.conditions import EqualsCondition, InCondition
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace import Configuration
 
@@ -14,15 +15,16 @@ __author__ = "Marius Lindauer"
 __license__ = "BSD"
 
 
-class RandomForest(self):
+class RandomForest(object):
 
-    @abstractmethod
+    @staticmethod
     def add_params(cs: ConfigurationSpace):
         '''
             adds parameters to ConfigurationSpace 
         '''
         try:
             classifier = cs.get_hyperparameter("classifier")
+            classifier.choices.append("RandomForest")
         except KeyError:
             classifier = CategoricalHyperparameter(
                 "classifier", choices=["RandomForest"], default="RandomForest")
@@ -45,29 +47,32 @@ class RandomForest(self):
         cs.add_hyperparameter(bootstrap)
 
         cond = InCondition(
-            child=n_estimators, parent=classifier, values=[RandomForest])
+            child=n_estimators, parent=classifier, values=["RandomForest"])
         cs.add_condition(cond)
         cond = InCondition(
-            child=criterion, parent=classifier, values=[RandomForest])
+            child=criterion, parent=classifier, values=["RandomForest"])
         cs.add_condition(cond)
         cond = InCondition(
-            child=max_depth, parent=classifier, values=[RandomForest])
+            child=max_depth, parent=classifier, values=["RandomForest"])
         cs.add_condition(cond)
         cond = InCondition(
-            child=min_samples_split, parent=classifier, values=[RandomForest])
+            child=min_samples_split, parent=classifier, values=["RandomForest"])
         cs.add_condition(cond)
         cond = InCondition(
-            child=bootstrap, parent=classifier, values=[RandomForest])
+            child=bootstrap, parent=classifier, values=["RandomForest"])
         cs.add_condition(cond)
 
     def __init__(self):
         '''
             Constructor
         '''
-        
+
         self.model = None
 
-    def fit(self, X, y, weights=None, config: Configuration):
+    def __str__(self):
+        return "RandomForest"
+
+    def fit(self, X, y, config: Configuration, weights=None):
         '''
             fit pca object to ASlib scenario data
 
@@ -84,14 +89,14 @@ class RandomForest(self):
 
         '''
 
-        self.model = RandomForestClassifier(n_estimators=config["rf:n_estimators"], 
-                               criterion=config["rf:criterion"], 
-                               max_depth=config["rf:max_depth"], 
-                               min_samples_split=config["rf:min_samples_split"], 
-                               bootstrap=config["rf:bootstrap"], 
-                               random_state=12345)
+        self.model = RandomForestClassifier(n_estimators=config["rf:n_estimators"],
+                                            criterion=config["rf:criterion"],
+                                            max_depth=config["rf:max_depth"],
+                                            min_samples_split=config[
+                                                "rf:min_samples_split"],
+                                            bootstrap=config["rf:bootstrap"],
+                                            random_state=12345)
         self.model.fit(X, y, weights)
-        
 
     def predict(self, feature_vector):
         '''
