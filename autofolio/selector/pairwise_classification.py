@@ -59,7 +59,7 @@ class PairwiseClassifier(object):
         n_algos = len(scenario.algorithms)
         X = scenario.feature_data.values
         for i in range(n_algos):
-            for j in range(i+1, n_algos):
+            for j in range(i + 1, n_algos):
                 y_i = scenario.performance_data[scenario.algorithms[i]].values
                 y_j = scenario.performance_data[scenario.algorithms[j]].values
                 y = y_i < y_j
@@ -68,14 +68,12 @@ class PairwiseClassifier(object):
                 clf.fit(X, y, config, weights)
                 self.classifiers.append(clf)
 
-    def predict(self, feature_vector, scenario: ASlibScenario):
+    def predict(self, scenario: ASlibScenario):
         '''
             transform ASLib scenario data
 
             Arguments
             ---------
-            feature_vector: numpy.array
-                instance feature vector
             scenario: data.aslib_scenario.ASlibScenario
                 ASlib Scenario with all data in pandas
 
@@ -91,22 +89,21 @@ class PairwiseClassifier(object):
             cutoff = 2**31
 
         n_algos = len(scenario.algorithms)
-        scores = np.zero(n_algo)
         X = scenario.feature_data.values
+        scores = np.zeros((X.shape[0], n_algos))
         clf_indx = 0
         for i in range(n_algos):
-            for j in range(i+1, n_algos):
+            for j in range(i + 1, n_algos):
                 clf = self.classifiers[clf_indx]
-                y = clf_indx.predict(feature_vector)
-                if y == 1:
-                    scores[i] += 1
-                else:
-                    scores[j] += 1
+                Y = clf.predict(X)
+                scores[Y == 1, i] += 1
+                scores[Y == 0, j] += 1
                 clf_indx += 1
 
-        self.logger.debug(zip(self.scenario.algorithms, scores))
-        algo_indx = np.argmax(scores)
-        selected_algo = self.scenario.algorithms[algo_indx]
+        #self.logger.debug(
+        #   sorted(list(zip(scenario.algorithms, scores)), key=lambda x: x[1], reverse=True))
+        algo_indx = np.argmax(scores, axis=1)
 
-        return [(selected_algo, cutoff)]
-    
+        schedules = dict((str(inst),s) for s,inst in zip([(scenario.algorithms[i], cutoff) for i in algo_indx], scenario.feature_data.index))
+        self.logger.debug(schedules)
+        return schedules

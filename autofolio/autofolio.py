@@ -1,5 +1,7 @@
 import logging
 
+import numpy as np
+
 from ConfigSpace.configuration_space import Configuration, \
     ConfigurationSpace
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
@@ -18,6 +20,9 @@ from autofolio.selector.classifiers.random_forest import RandomForest
 
 # selectors
 from autofolio.selector.pairwise_classification import PairwiseClassifier
+
+#validation
+from autofolio.validation.validate import Validator
 
 __author__ = "Marius Lindauer"
 __license__ = "BSD"
@@ -48,11 +53,8 @@ class AutoFolio(object):
         cs = self.get_cs(scenario)
 
         config = cs.get_default_configuration()
-
-        self.fit(scenario=scenario, config=config)
-
-        schedules = self.predict(
-            scenario, config, feature_pre_pipeline, selector)
+        
+        self.run_cv(scenario, config, folds=10)
 
     def get_cs(self, scenario: ASlibScenario):
         '''
@@ -84,6 +86,34 @@ class AutoFolio(object):
         PairwiseClassifier.add_params(self.cs)
 
         return self.cs
+
+    def run_cv(self, scenario: ASlibScenario, config: Configuration, folds=10):
+        '''
+            run a cross fold validation based on the given data from cv.arff
+
+            Arguments
+            ---------
+            scenario: autofolio.data.aslib_scenario.ASlibScenario
+                aslib scenario at hand
+            config: Configuration
+                parameter configuration to use for preprocessing
+            folds: int
+                number of cv-splits
+        '''
+
+        for i in range(1, folds+1):
+            self.logger.info("CV-Iteration: %d" %(i))
+            test_scenario, training_scenario = scenario.get_split(indx=i)
+
+            feature_pre_pipeline, selector = self.fit(
+                scenario=training_scenario, config=config)
+
+            schedules = self.predict(
+                test_scenario, config, feature_pre_pipeline, selector)
+            
+            val = Validator()
+            stats = val.validate_runtime(schedules=schedules, test_scenario=test_scenario)
+            
 
     def fit(self, scenario: ASlibScenario, config: Configuration):
         '''
@@ -177,12 +207,10 @@ class AutoFolio(object):
                 fitted selector object
         '''
 
+        self.logger.info("Predict on Test")
         for f_pre in feature_pre_pipeline:
             scenario = f_pre.transform(scenario)
 
-        schedules = []
-        for f_vec in scenario.feature_data.values:
-            schedule = selector.predict(f_vec)
-            schedules.append(schedule)
+        schedules = selector.predict(scenario=scenario)
 
         return schedules

@@ -27,6 +27,7 @@ class FeatureGroupFiltering(object):
         '''
         self.logger = logging.getLogger("FeatureGroupFiltering")
         self.active_features = []
+        self.active_groups = []
 
     def fit(self, scenario, config):
         '''
@@ -60,6 +61,7 @@ class FeatureGroupFiltering(object):
                         change = True
 
         self.logger.debug("Active feature groups: %s" %(active_groups))
+        self.active_groups = active_groups
         
         # get active features
         for group in active_groups:
@@ -87,6 +89,7 @@ class FeatureGroupFiltering(object):
         '''
         
         scenario.feature_data = scenario.feature_data[self.active_features]
+        scenario.used_feature_groups = self.active_groups
         
         return scenario
 
