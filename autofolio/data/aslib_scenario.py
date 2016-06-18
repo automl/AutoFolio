@@ -51,6 +51,7 @@ class ASlibScenario(object):
 
         self.feature_data = None
         self.performance_data = None
+        self.runstatus_data = None
         self.feature_cost_data = None
         self.feature_runstatus_data = None
         self.ground_truth_data = None
@@ -67,7 +68,7 @@ class ASlibScenario(object):
             "ground_truth.arff": self.read_ground_truth,
             "cv.arff": self.read_cv
         }
-        
+
         self.CHECK_VALID = True
 
     def read_scenario(self, dn):
@@ -85,7 +86,7 @@ class ASlibScenario(object):
         self.dir_ = dn
         self.find_files()
         self.read_files()
-        
+
         if self.CHECK_VALID:
             self.check_data()
 
@@ -166,7 +167,7 @@ class ASlibScenario(object):
         if self.algorithms_stochastic is None:
             self.algorithms_stochastic = set()
         self.feature_group_dict = description.get('feature_steps')
-        self.feature_steps = self.feature_group_dict.keys() 
+        self.feature_steps = self.feature_group_dict.keys()
         self.feature_steps_default = description.get('default_steps')
 
         for step, d in self.feature_group_dict.items():
@@ -327,7 +328,7 @@ class ASlibScenario(object):
 
         self.performance_data = pd.DataFrame(
             perf_array, index=self.instances, columns=self.algorithms)
-        self.status_data = pd.DataFrame(
+        self.runstatus_data = pd.DataFrame(
             status_array, index=self.instances, columns=self.algorithms)
 
     def read_feature_values(self, file_):
@@ -458,6 +459,8 @@ class ASlibScenario(object):
         self.feature_cost_data = pd.DataFrame(
             data[:, 2:], index=data[:, 0], columns=cols)
 
+        self.feature_cost_data[pd.isnull(self.feature_cost_data)] = 0
+
     def read_feature_runstatus(self, file_):
         '''
             reads run stati of all pairs instance x feature step
@@ -580,7 +583,7 @@ class ASlibScenario(object):
         data = np.array(arff_dict["data"])
         cols = list(map(lambda x: x[0], arff_dict["attributes"][2:]))
         self.cv_data = pd.DataFrame(
-            data[:, 2:], index=data[:, 0], columns=cols,dtype=np.float)
+            data[:, 2:], index=data[:, 0], columns=cols, dtype=np.float)
 
     def check_data(self):
         '''
@@ -590,67 +593,79 @@ class ASlibScenario(object):
         all_data = [self.feature_data, self.feature_cost_data,
                     self.performance_data, self.feature_runstatus_data,
                     self.ground_truth_data, self.cv_data]
-        
+
         # all data should have the same instances
         set_insts = set(self.instances)
         for data in all_data:
             if data is not None and set_insts.difference(data.index):
-                self.logger.error("Not all data matrices have the same instances: %s" %(set_insts.difference(data.index)))
+                self.logger.error("Not all data matrices have the same instances: %s" % (
+                    set_insts.difference(data.index)))
                 sys.exit(3)
-            
-            #each instance should be listed only once
+
+            # each instance should be listed only once
             if data is not None and len(list(set(data.index))) != len(data.index):
                 self.logger.error("Some instances are listed more than once")
                 sys.exit(3)
-                
-                
+
     def get_split(self, indx=1):
         '''
             returns a copy of self but only with the data of the i-th cross validation split according to cv.arff
-            
+
             Arguments
             ---------
                 indx : int
                     indx of the cv split (should be in most cases within [1,10]
-                    
+
             Returns
             -------
                 training split : ASlibScenario
                 test split : ASlibScenario
         '''
-        
+
         if self.cv_data is None:
-            raise ValueError("The ASlib scenario has not provided any cv.arff -- cannot get split data")
-        
-        test_insts = self.cv_data[self.cv_data["fold"] == float(indx)].index.tolist()
-        training_insts = self.cv_data[self.cv_data.fold != float(indx)].index.tolist()
-        
+            raise ValueError(
+                "The ASlib scenario has not provided any cv.arff -- cannot get split data")
+
+        test_insts = self.cv_data[
+            self.cv_data["fold"] == float(indx)].index.tolist()
+        training_insts = self.cv_data[
+            self.cv_data.fold != float(indx)].index.tolist()
+
         test = copy.copy(self)
         training = copy.copy(self)
-        
+
         # feature_data
         test.feature_data = test.feature_data.drop(training_insts)
         training.feature_data = training.feature_data.drop(test_insts)
         # performance_data
         test.performance_data = test.performance_data.drop(training_insts)
         training.performance_data = training.performance_data.drop(test_insts)
+        # runstatus_data
+        test.runstatus_data = test.runstatus_data.drop(training_insts)
+        training.runstatus_data = training.runstatus_data.drop(test_insts)
         # self.feature_runstatus_data
-        test.feature_runstatus_data = test.feature_runstatus_data.drop(training_insts)
-        training.feature_runstatus_data = training.feature_runstatus_data.drop(test_insts)
+        test.feature_runstatus_data = test.feature_runstatus_data.drop(
+            training_insts)
+        training.feature_runstatus_data = training.feature_runstatus_data.drop(
+            test_insts)
         # feature_cost_data
         if self.feature_cost_data is not None:
-            test.feature_cost_data = test.feature_cost_data.drop(training_insts)
-            training.feature_cost_data = training.feature_cost_data.drop(test_insts)
+            test.feature_cost_data = test.feature_cost_data.drop(
+                training_insts)
+            training.feature_cost_data = training.feature_cost_data.drop(
+                test_insts)
         # ground_truth_data
         if self.ground_truth_data is not None:
-            test.ground_truth_data = test.ground_truth_data.drop(training_insts)
-            training.ground_truth_data = training.ground_truth_data.drop(test_insts)
+            test.ground_truth_data = test.ground_truth_data.drop(
+                training_insts)
+            training.ground_truth_data = training.ground_truth_data.drop(
+                test_insts)
         test.cv_data = None
         training.cv_data = None
-        
+
         test.instances = test_insts
         training.instances = training_insts
-        
+
         self.used_feature_groups = None
-        
+
         return test, training

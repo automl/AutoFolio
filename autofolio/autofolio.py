@@ -21,8 +21,8 @@ from autofolio.selector.classifiers.random_forest import RandomForest
 # selectors
 from autofolio.selector.pairwise_classification import PairwiseClassifier
 
-#validation
-from autofolio.validation.validate import Validator
+# validation
+from autofolio.validation.validate import Validator, Stats
 
 __author__ = "Marius Lindauer"
 __license__ = "BSD"
@@ -53,7 +53,7 @@ class AutoFolio(object):
         cs = self.get_cs(scenario)
 
         config = cs.get_default_configuration()
-        
+
         self.run_cv(scenario, config, folds=10)
 
     def get_cs(self, scenario: ASlibScenario):
@@ -101,8 +101,9 @@ class AutoFolio(object):
                 number of cv-splits
         '''
 
-        for i in range(1, folds+1):
-            self.logger.info("CV-Iteration: %d" %(i))
+        cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
+        for i in range(1, folds + 1):
+            self.logger.info("CV-Iteration: %d" % (i))
             test_scenario, training_scenario = scenario.get_split(indx=i)
 
             feature_pre_pipeline, selector = self.fit(
@@ -110,10 +111,15 @@ class AutoFolio(object):
 
             schedules = self.predict(
                 test_scenario, config, feature_pre_pipeline, selector)
-            
+
             val = Validator()
-            stats = val.validate_runtime(schedules=schedules, test_scenario=test_scenario)
-            
+            stats = val.validate_runtime(
+                schedules=schedules, test_scenario=test_scenario)
+            cv_stat.merge(stat=stats)
+
+        self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        self.logger.info("CV Stats")
+        cv_stat.show()
 
     def fit(self, scenario: ASlibScenario, config: Configuration):
         '''
