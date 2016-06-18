@@ -99,7 +99,7 @@ class Validator(object):
         stat.unsolvable += unsolvable.sum()
 
         for inst, schedule in schedules.items():
-
+            self.logger.debug("Validate %s on %s" %(schedule, inst))
             used_time = 0
             if feature_times:
                 used_time += f_times[inst]

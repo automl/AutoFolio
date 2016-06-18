@@ -98,18 +98,18 @@ class RandomForest(object):
                                             random_state=12345)
         self.model.fit(X, y, weights)
 
-    def predict(self, feature_vector):
+    def predict(self, X):
         '''
             transform ASLib scenario data
 
             Arguments
             ---------
-            feature_vector: numpy.array
-                instance feature vector
+            X: numpy.array
+                instance feature matrix
 
             Returns
             -------
 
         '''
 
-        return self.model.predict(feature_vector)
+        return self.model.predict(X)

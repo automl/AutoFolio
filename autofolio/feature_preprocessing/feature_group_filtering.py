@@ -45,6 +45,8 @@ class FeatureGroupFiltering(object):
             if param.startswith("fgroup_") and config[param]:
                 active_groups.append(param.replace("fgroup_", ""))
         
+        active_groups.sort() # to ensure same order of features always
+        
         # check requirements for each step
         change = True
         while change:
@@ -87,6 +89,7 @@ class FeatureGroupFiltering(object):
             -------
             data.aslib_scenario.ASlibScenario
         '''
+        
         
         scenario.feature_data = scenario.feature_data[self.active_features]
         scenario.used_feature_groups = self.active_groups

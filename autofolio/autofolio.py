@@ -54,6 +54,7 @@ class AutoFolio(object):
         cs = self.get_cs(scenario)
 
         config = cs.get_default_configuration()
+        self.logger.debug(config)
 
         self.run_cv(scenario, config, folds=10)
 

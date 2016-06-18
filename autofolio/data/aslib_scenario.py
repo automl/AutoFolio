@@ -410,7 +410,7 @@ class ASlibScenario(object):
         cols = list(map(lambda x: x[0], arff_dict["attributes"][2:]))
         self.feature_data = pd.DataFrame(
             data[:, 2:], index=data[:, 0], columns=cols)
-
+        
     def read_feature_costs(self, file_):
         '''
             reads feature time file

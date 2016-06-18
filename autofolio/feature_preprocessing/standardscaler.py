@@ -67,6 +67,7 @@ class StandardScalerWrapper(object):
         '''
         if self.scaler:
             self.logger.debug("Applying StandardScaler")
+            
             values = self.scaler.transform(
                 np.array(scenario.feature_data.values))
 

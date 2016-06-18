@@ -105,5 +105,5 @@ class PairwiseClassifier(object):
         algo_indx = np.argmax(scores, axis=1)
 
         schedules = dict((str(inst),[s]) for s,inst in zip([(scenario.algorithms[i], cutoff+1) for i in algo_indx], scenario.feature_data.index))
-        self.logger.debug(schedules)
+        #self.logger.debug(schedules)
         return schedules
