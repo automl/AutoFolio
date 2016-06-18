@@ -14,6 +14,7 @@ from autofolio.data.aslib_scenario import ASlibScenario
 from autofolio.feature_preprocessing.pca import PCAWrapper
 from autofolio.feature_preprocessing.missing_values import ImputerWrapper
 from autofolio.feature_preprocessing.feature_group_filtering import FeatureGroupFiltering
+from autofolio.feature_preprocessing.standardscaler import StandardScalerWrapper
 
 # classifiers
 from autofolio.selector.classifiers.random_forest import RandomForest
@@ -78,6 +79,7 @@ class AutoFolio(object):
         # preprocessing
         PCAWrapper.add_params(self.cs)
         ImputerWrapper.add_params(self.cs)
+        StandardScalerWrapper.add_params(self.cs)
 
         # classifiers
         RandomForest.add_params(self.cs)
@@ -138,14 +140,14 @@ class AutoFolio(object):
                 fitted selector
         '''
 
-        scenario, feature_pre_pipeline = self.feature_preprocessing(
+        scenario, feature_pre_pipeline = self.fit_transform_feature_preprocessing(
             scenario, config)
 
         selector = self.fit_selector(scenario, config)
 
         return feature_pre_pipeline, selector
 
-    def feature_preprocessing(self, scenario: ASlibScenario, config: Configuration):
+    def fit_transform_feature_preprocessing(self, scenario: ASlibScenario, config: Configuration):
         '''
             performs feature preprocessing on a given ASlib scenario wrt to a given configuration
 
@@ -167,11 +169,14 @@ class AutoFolio(object):
 
         imputer = ImputerWrapper()
         scenario = imputer.fit_transform(scenario, config)
+        
+        scaler = StandardScalerWrapper()
+        scenario = scaler.fit_transform(scenario, config)
 
         pca = PCAWrapper()
         scenario = pca.fit_transform(scenario, config)
 
-        return scenario, [fgf, imputer, pca]
+        return scenario, [fgf, imputer, scaler, pca]
 
     def fit_selector(self, scenario: ASlibScenario, config: Configuration):
         '''
