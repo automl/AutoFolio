@@ -122,13 +122,12 @@ class Validator(object):
 
             for algo, budget in schedule:
                 time = test_scenario.performance_data[algo][inst]
-                if time <= budget:
-                    used_time += time
-                    if used_time < test_scenario.algorithm_cutoff_time:
-                        stat.par1 += used_time
-                        stat.solved += 1
+                used_time += min(time, budget)
+                if used_time <= test_scenario.algorithm_cutoff_time and test_scenario.runstatus_data[algo][inst] == "ok":
+                    stat.par1 += used_time
+                    stat.solved += 1
 
-                if used_time >= test_scenario.algorithm_cutoff_time:
+                if used_time > test_scenario.algorithm_cutoff_time:
                     stat.par1 += test_scenario.algorithm_cutoff_time
                     stat.timeouts += 1
 
