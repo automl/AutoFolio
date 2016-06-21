@@ -36,17 +36,21 @@ class Stats(object):
                 remove unsolvable from stats
         '''
 
-        rm_string = "not removed"
         if remove_unsolvable:
             rm_string = "removed"
-            self.timeouts -= self.unsolvable
-            self.par1 -= self.unsolvable * self.runtime_cutoff
-            self.par10 -= self.unsolvable * self.runtime_cutoff * 10
+            timeouts = self.timeouts - self.unsolvable
+            par1 = self.par1 - (self.unsolvable * self.runtime_cutoff)
+            par10 = self.par10 - (self.unsolvable * self.runtime_cutoff * 10)
+        else:
+            rm_string = "not removed"
+            timeouts = self.timeouts
+            par1 = self.par1
+            par10 = self.par10
 
-        n_samples = self.timeouts + self.solved
-        self.logger.info("PAR1: %.4f" % (self.par1 / n_samples))
-        self.logger.info("PAR10: %.4f" % (self.par10 / n_samples))
-        self.logger.info("Timeouts: %d / %d" % (self.timeouts, n_samples))
+        n_samples = timeouts + self.solved
+        self.logger.info("PAR1: %.4f" % (par1 / n_samples))
+        self.logger.info("PAR10: %.4f" % (par10 / n_samples))
+        self.logger.info("Timeouts: %d / %d" % (timeouts, n_samples))
         self.logger.info("Solved: %d / %d" % (self.solved, n_samples))
         self.logger.info("Unsolvable (%s): %d / %d" %
                          (rm_string, self.unsolvable, n_samples))
