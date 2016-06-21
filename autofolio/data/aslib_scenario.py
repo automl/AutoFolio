@@ -174,12 +174,12 @@ class ASlibScenario(object):
             if d.get("requires") and not isinstance(d["requires"], list):
                 self.feature_group_dict[step]["requires"] = [d["requires"]]
 
-        self.algorithms = list(
+        self.algorithms = sorted(list(
             set(self.algorithms_stochastic).union(
-                self.algortihms_deterministics))
+                self.algortihms_deterministics)))
 
-        self.algorithms = list(
-            set(self.algorithms_stochastic).union(self.algortihms_deterministics))
+        self.algorithms = sorted(list(
+            set(self.algorithms_stochastic).union(self.algortihms_deterministics)))
 
         if not self.scenario:
             self.logger.warn("Have not found SCENARIO_ID")
@@ -635,31 +635,31 @@ class ASlibScenario(object):
         training = copy.copy(self)
 
         # feature_data
-        test.feature_data = test.feature_data.drop(training_insts)
-        training.feature_data = training.feature_data.drop(test_insts)
+        test.feature_data = test.feature_data.drop(training_insts).sort_index()
+        training.feature_data = training.feature_data.drop(test_insts).sort_index()
         # performance_data
-        test.performance_data = test.performance_data.drop(training_insts)
-        training.performance_data = training.performance_data.drop(test_insts)
+        test.performance_data = test.performance_data.drop(training_insts).sort_index()
+        training.performance_data = training.performance_data.drop(test_insts).sort_index()
         # runstatus_data
-        test.runstatus_data = test.runstatus_data.drop(training_insts)
-        training.runstatus_data = training.runstatus_data.drop(test_insts)
+        test.runstatus_data = test.runstatus_data.drop(training_insts).sort_index()
+        training.runstatus_data = training.runstatus_data.drop(test_insts).sort_index()
         # self.feature_runstatus_data
         test.feature_runstatus_data = test.feature_runstatus_data.drop(
-            training_insts)
+            training_insts).sort_index()
         training.feature_runstatus_data = training.feature_runstatus_data.drop(
-            test_insts)
+            test_insts).sort_index()
         # feature_cost_data
         if self.feature_cost_data is not None:
             test.feature_cost_data = test.feature_cost_data.drop(
-                training_insts)
+                training_insts).sort_index()
             training.feature_cost_data = training.feature_cost_data.drop(
-                test_insts)
+                test_insts).sort_index()
         # ground_truth_data
         if self.ground_truth_data is not None:
             test.ground_truth_data = test.ground_truth_data.drop(
-                training_insts)
+                training_insts).sort_index()
             training.ground_truth_data = training.ground_truth_data.drop(
-                test_insts)
+                test_insts).sort_index()
         test.cv_data = None
         training.cv_data = None
 
