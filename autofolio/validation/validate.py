@@ -16,11 +16,12 @@ class Stats(object):
             runtime_cutoff: int
                 maximal running time
         '''
-        self.par1 = 0
-        self.par10 = 0
+        self.par1 = 0.0
+        self.par10 = 0.0
         self.timeouts = 0
         self.solved = 0
         self.unsolvable = 0
+        self.presolved_feats = 0
 
         self.runtime_cutoff = runtime_cutoff
 
@@ -51,9 +52,11 @@ class Stats(object):
         self.logger.info("PAR1: %.4f" % (par1 / n_samples))
         self.logger.info("PAR10: %.4f" % (par10 / n_samples))
         self.logger.info("Timeouts: %d / %d" % (timeouts, n_samples))
+        self.logger.info("Presolved during feature computation: %d / %d" %(self.presolved_feats, n_samples))
         self.logger.info("Solved: %d / %d" % (self.solved, n_samples))
         self.logger.info("Unsolvable (%s): %d / %d" %
                          (rm_string, self.unsolvable, n_samples))
+        
 
     def merge(self, stat):
         '''
@@ -68,6 +71,7 @@ class Stats(object):
         self.timeouts += stat.timeouts
         self.solved += stat.solved
         self.unsolvable += stat.unsolvable
+        self.presolved_feats += stat.presolved_feats
 
 
 class Validator(object):
@@ -118,6 +122,7 @@ class Validator(object):
             if presolved and used_time < test_scenario.algorithm_cutoff_time:
                 stat.par1 += used_time
                 stat.solved += 1
+                stat.presolved_feats += 1
                 continue
             elif presolved and used_time >= test_scenario.algorithm_cutoff_time:
                 stat.par1 += test_scenario.algorithm_cutoff_time

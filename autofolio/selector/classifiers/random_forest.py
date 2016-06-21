@@ -36,12 +36,18 @@ class RandomForest(object):
         criterion = CategoricalHyperparameter(
             name="rf:criterion", choices=["gini", "entropy"], default="gini")
         cs.add_hyperparameter(criterion)
+        max_features = CategoricalHyperparameter(
+            name="rf:max_features", choices=["sqrt", "log2", None], default="sqrt")
+        cs.add_hyperparameter(max_features)
         max_depth = UniformIntegerHyperparameter(
             name="rf:max_depth", lower=10, upper=2**31, default=2**31, log=True)
         cs.add_hyperparameter(max_depth)
         min_samples_split = UniformIntegerHyperparameter(
             name="rf:min_samples_split", lower=2, upper=100, default=2, log=True)
         cs.add_hyperparameter(min_samples_split)
+        min_samples_leaf = UniformIntegerHyperparameter(
+            name="rf:min_samples_leaf", lower=2, upper=100, default=10, log=True)
+        cs.add_hyperparameter(min_samples_leaf)
         bootstrap = CategoricalHyperparameter(
             name="rf:bootstrap", choices=[True, False], default=True)
         cs.add_hyperparameter(bootstrap)
@@ -53,10 +59,16 @@ class RandomForest(object):
             child=criterion, parent=classifier, values=["RandomForest"])
         cs.add_condition(cond)
         cond = InCondition(
+            child=max_features, parent=classifier, values=["RandomForest"])
+        cs.add_condition(cond)
+        cond = InCondition(
             child=max_depth, parent=classifier, values=["RandomForest"])
         cs.add_condition(cond)
         cond = InCondition(
             child=min_samples_split, parent=classifier, values=["RandomForest"])
+        cs.add_condition(cond)
+        cond = InCondition(
+            child=min_samples_leaf, parent=classifier, values=["RandomForest"])
         cs.add_condition(cond)
         cond = InCondition(
             child=bootstrap, parent=classifier, values=["RandomForest"])
@@ -90,10 +102,14 @@ class RandomForest(object):
         '''
 
         self.model = RandomForestClassifier(n_estimators=config["rf:n_estimators"],
+                                            max_features=config[
+                                                "rf:max_features"],
                                             criterion=config["rf:criterion"],
                                             max_depth=config["rf:max_depth"],
                                             min_samples_split=config[
                                                 "rf:min_samples_split"],
+                                            min_samples_leaf=config[
+                                                "rf:min_samples_leaf"],
                                             bootstrap=config["rf:bootstrap"],
                                             random_state=12345)
         self.model.fit(X, y, weights)
