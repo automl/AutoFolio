@@ -79,7 +79,7 @@ class PairwiseClassifier(object):
 
             Returns
             -------
-                schedule: [(solver, time)]
+                schedule: {inst -> (solver, time)}
                     schedule of solvers with a running time budget
         '''
 
