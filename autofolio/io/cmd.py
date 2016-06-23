@@ -23,6 +23,7 @@ class CMDParser(object):
         req.add_argument("-s", "--scenario", required=True, help="directory with ASlib scenario files")
         
         opt = self._arg_parser.add_argument_group("Optional Options")
+        opt.add_argument("-t", "--tune", action="store_true", default=False, help="uses SMAC3 to determine a better parameter configuration")
         opt.add_argument("-v", "--verbose", choices=["INFO","DEBUG"], default="INFO", help="verbose level")
         
     def parse(self):

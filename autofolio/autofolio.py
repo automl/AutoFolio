@@ -1,4 +1,6 @@
 import logging
+import functools
+import traceback
 
 import numpy as np
 
@@ -6,6 +8,12 @@ from ConfigSpace.configuration_space import Configuration, \
     ConfigurationSpace
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
     UniformFloatHyperparameter, UniformIntegerHyperparameter
+
+# SMAC3
+from smac.tae.execute_func import ExecuteTAFunc
+from smac.scenario.scenario import Scenario
+from smac.smbo.smbo import SMBO
+from smac.stats.stats import Stats as AC_Stats
 
 from autofolio.io.cmd import CMDParser
 from autofolio.data.aslib_scenario import ASlibScenario
@@ -37,6 +45,7 @@ class AutoFolio(object):
 
         self._root_logger = logging.getLogger()
         self.logger = logging.getLogger("AutoFolio")
+        self.cs = None
 
     def run(self):
         '''
@@ -51,12 +60,15 @@ class AutoFolio(object):
         scenario = ASlibScenario()
         scenario.read_scenario(args_.scenario)
 
-        cs = self.get_cs(scenario)
+        self.cs = self.get_cs(scenario)
 
-        config = cs.get_default_configuration()
+        if args_.tune:
+            config = self.get_tuned_config(scenario)
+        else:
+            config = self.cs.get_default_configuration()
         self.logger.debug(config)
 
-        self.run_cv(scenario, config, folds=10)
+        self.run_cv(config=config, scenario=scenario, folds=10)
 
     def get_cs(self, scenario: ASlibScenario):
         '''
@@ -90,7 +102,47 @@ class AutoFolio(object):
 
         return self.cs
 
-    def run_cv(self, scenario: ASlibScenario, config: Configuration, folds=10):
+    def get_tuned_config(self, scenario: ASlibScenario):
+        '''
+            uses SMAC3 to determine a well-performing configuration in the configuration space self.cs on the given scenario
+            
+            Arguments
+            ---------
+            scenario: ASlibScenario
+                ASlib Scenario at hand
+            
+            Returns
+            -------
+            Configuration
+                best incumbent configuration found by SMAC
+        '''
+
+        taf = ExecuteTAFunc(functools.partial(self.run_cv, scenario=scenario))
+
+        ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
+                             # at most 10 function evaluations
+                             "runcount-limit": 10,
+                             "cs": self.cs,  # configuration space
+                             "deterministic": "true"
+                             })
+
+        # necessary to use stats options related to scenario information
+        AC_Stats.scenario = ac_scenario
+
+        # Optimize
+        self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        self.logger.info("Start Configuration")
+        self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        smbo = SMBO(scenario=ac_scenario, tae_runner=taf,
+                    rng=np.random.RandomState(42))
+        smbo.run(max_iters=999)
+
+        AC_Stats.print_stats()
+        self.logger.info("Final Incumbent: %s" % (smbo.incumbent))
+
+        return smbo.incumbent
+
+    def run_cv(self, config: Configuration, scenario: ASlibScenario, folds=10):
         '''
             run a cross fold validation based on the given data from cv.arff
 
@@ -104,25 +156,31 @@ class AutoFolio(object):
                 number of cv-splits
         '''
 
-        cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
-        for i in range(1, folds + 1):
-            self.logger.info("CV-Iteration: %d" % (i))
-            test_scenario, training_scenario = scenario.get_split(indx=i)
+        try:
+            cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
+            for i in range(1, folds + 1):
+                self.logger.info("CV-Iteration: %d" % (i))
+                test_scenario, training_scenario = scenario.get_split(indx=i)
+    
+                feature_pre_pipeline, selector = self.fit(
+                    scenario=training_scenario, config=config)
+    
+                schedules = self.predict(
+                    test_scenario, config, feature_pre_pipeline, selector)
+    
+                val = Validator()
+                stats = val.validate_runtime(
+                    schedules=schedules, test_scenario=test_scenario)
+                cv_stat.merge(stat=stats)
+    
+            self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+            self.logger.info("CV Stats")
+            par10 = cv_stat.show()
+        except ValueError:
+            traceback.print_exc()
+            par10 = scenario.algorithm_cutoff_time*10
 
-            feature_pre_pipeline, selector = self.fit(
-                scenario=training_scenario, config=config)
-
-            schedules = self.predict(
-                test_scenario, config, feature_pre_pipeline, selector)
-
-            val = Validator()
-            stats = val.validate_runtime(
-                schedules=schedules, test_scenario=test_scenario)
-            cv_stat.merge(stat=stats)
-
-        self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        self.logger.info("CV Stats")
-        cv_stat.show()
+        return par10
 
     def fit(self, scenario: ASlibScenario, config: Configuration):
         '''
@@ -170,7 +228,7 @@ class AutoFolio(object):
 
         imputer = ImputerWrapper()
         scenario = imputer.fit_transform(scenario, config)
-        
+
         scaler = StandardScalerWrapper()
         scenario = scaler.fit_transform(scenario, config)
 

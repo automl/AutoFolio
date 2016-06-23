@@ -35,6 +35,11 @@ class Stats(object):
             --------
             remove_unsolvable : bool
                 remove unsolvable from stats
+                
+            Returns
+            -------
+            par10: int
+                penalized average runtime 
         '''
 
         if remove_unsolvable:
@@ -57,6 +62,7 @@ class Stats(object):
         self.logger.info("Unsolvable (%s): %d / %d" %
                          (rm_string, self.unsolvable, n_samples))
         
+        return par10 / n_samples
 
     def merge(self, stat):
         '''
