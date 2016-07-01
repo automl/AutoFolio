@@ -1,7 +1,31 @@
-#include "sort_py.lp".
+#script(python)
+
+#import gringo
+
+ts = {}
+def insert(i,s,t):
+  key = str(s)
+  if not ts.get(key):
+    ts[key] = []
+  ts[key].append([i,t])
+  return 1
+
+def order(s):
+  key = str(s)
+  if not ts.get(key):
+    ts[key] = []
+  ts[key].sort(key=lambda x: int(x[1]))
+  p = None
+  r = []
+  for i, v in ts[key]:
+    if p:
+      r.append((p,i))
+    p = i
+  return r
+
+#end.
 
 #const cores=1.
-#const optMode=4.
 
 solver(S)  :- time(_,S,_).
 time(S,T)  :- time(_,S,T).
@@ -21,11 +45,6 @@ solved(I,S) :- solved(J,S), order(I,J,S).
 solved(I)   :- solved(I,_).
 
 #maximize { 1@2,I: solved(I) }.  
-#minimize { T*T@1,S : slice(S,T), optMode = 1 }.
-#maximize { T*T@1,S : slice(S,T), optMode = 2 }. 
-#minimize { T@1,S : slice(S,T), optMode = 3 }.
-#maximize { T@1,S : slice(S,T), optMode = 4 }.
-#minimize { 1@1,S : slice(S,T), T > 0, optMode = 5 }. 
-#maximize { 1@1,S : slice(S,T), T > 0, optMode = 6 }.
+#minimize { T*T@1,S : slice(S,T)}.
 
 #show slice/3.

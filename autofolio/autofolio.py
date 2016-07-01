@@ -24,6 +24,9 @@ from autofolio.feature_preprocessing.missing_values import ImputerWrapper
 from autofolio.feature_preprocessing.feature_group_filtering import FeatureGroupFiltering
 from autofolio.feature_preprocessing.standardscaler import StandardScalerWrapper
 
+#presolving
+from autofolio.pre_solving.aspeed_schedule import Aspeed
+
 # classifiers
 from autofolio.selector.classifiers.random_forest import RandomForest
 
@@ -93,6 +96,9 @@ class AutoFolio(object):
         PCAWrapper.add_params(self.cs)
         ImputerWrapper.add_params(self.cs)
         StandardScalerWrapper.add_params(self.cs)
+
+        #Pre-Solving
+        Aspeed.add_params(cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
 
         # classifiers
         RandomForest.add_params(self.cs)
@@ -201,6 +207,8 @@ class AutoFolio(object):
 
         scenario, feature_pre_pipeline = self.fit_transform_feature_preprocessing(
             scenario, config)
+        
+        self.fit_pre_solving(scenario, config)
 
         selector = self.fit_selector(scenario, config)
 
@@ -236,6 +244,25 @@ class AutoFolio(object):
         scenario = pca.fit_transform(scenario, config)
 
         return scenario, [fgf, imputer, scaler, pca]
+    
+    def fit_pre_solving(self, scenario: ASlibScenario, config: Configuration):
+        '''
+            fits an pre-solving schedule using Aspeed [Hoos et al, 2015 TPLP) 
+            
+            Arguments
+            ---------
+            scenario: autofolio.data.aslib_scenario.ASlibScenario
+                aslib scenario at hand
+            config: Configuration
+                parameter configuration to use for preprocessing
+
+            Returns
+            -------
+                ???
+        '''
+        
+        aspeed = Aspeed()
+        aspeed.fit(scenario=scenario, config=config)
 
     def fit_selector(self, scenario: ASlibScenario, config: Configuration):
         '''
