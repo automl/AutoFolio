@@ -1,6 +1,7 @@
 import logging
 import functools
 import traceback
+import random
 
 import numpy as np
 
@@ -43,9 +44,18 @@ __version__ = "2.0.0"
 
 class AutoFolio(object):
 
-    def __init__(self):
-        ''' Constructor '''
+    def __init__(self, random_seed:int=12345):
+        ''' Constructor 
+            
+            Arguments
+            ---------
+            random_seed: int
+                random seed for numpy and random packages
+        '''
 
+        np.random.seed(random_seed) # fix seed
+        random.seed(random_seed)
+        
         self._root_logger = logging.getLogger()
         self.logger = logging.getLogger("AutoFolio")
         self.cs = None
@@ -163,6 +173,7 @@ class AutoFolio(object):
             folds: int
                 number of cv-splits
         '''
+        self.logger.info("Given Configuration: %s" %(config))
 
         try:
             cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
