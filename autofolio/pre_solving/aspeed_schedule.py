@@ -106,8 +106,7 @@ class Aspeed(object):
                     range(X.shape[0]), size=self.data_threshold, replace=True)
                 X = X[random_indx, :]
 
-            #TODO: MISSING A????
-            times = ["time(i%d, a%d, %d)." % (i, a, math.ceil(X[i, a]))
+            times = ["time(i%d, %d, %d)." % (i, j, math.ceil(X[i, j]))
                      for i in range(X.shape[0]) for j in range(X.shape[1])]
 
             kappa = "kappa(%d)." % (config["pre:cutoff"])
@@ -115,9 +114,9 @@ class Aspeed(object):
             data_in = " ".join(times) + " " + kappa
 
             # call aspeed and save schedule
-            self._call_clingo(data_in)
+            self._call_clingo(data_in=data_in, algorithms=scenario.performance_data.columns)
 
-    def _call_clingo(self, data_in: str):
+    def _call_clingo(self, data_in: str, algorithms: list):
         '''
             call clingo on self.enc_fn and facts from data_in
 
@@ -125,6 +124,8 @@ class Aspeed(object):
             ---------
             data_in: str
                 facts in format time(I,A,T) and kappa(C)
+            algorithms: list
+                list of algorithm names
         '''
         cmd = "%s -C %d -M %d -w /dev/null %s %s -" % (
             self.runsolver, self.cutoff, self.mem_limit, self.clingo, self.enc_fn)
@@ -132,10 +133,26 @@ class Aspeed(object):
         self.logger.info("Call: %s" % (cmd))
 
         p = subprocess.Popen(cmd,
-                             stdin=subprocess.PIPE, stdout=PIPE, shell=True)
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, universal_newlines=True)
         stdout, stderr = p.communicate(input=data_in)
-        self.logger.info(stdout.decode())
-
+        
+        self.logger.debug(stdout)
+        
+        schedule_dict = {}
+        for line in stdout.split("\n"):
+            if line.startswith("slice"):
+                schedule_dict = {} # reinitizalize for every found schedule
+                slices_str = line.split(" ")
+                for slice in slices_str:
+                    s_tuple = slice.replace("slice(","").rstrip(")").split(",")
+                    algo = algorithms[int(s_tuple[1])]
+                    budget = int(s_tuple[2])
+                    schedule_dict[algo] = budget
+        
+        self.schedule = sorted(schedule_dict.items(), key=lambda x: x[1])
+        
+        self.logger.info("Fitted Schedule: %s" %(self.schedule))
+        
     def predict(self, scenario: ASlibScenario):
         '''
             transform ASLib scenario data
@@ -147,7 +164,7 @@ class Aspeed(object):
 
             Returns
             -------
-                schedule: [(solver, time)]
+                schedule:{inst -> (solver, time)}
                     schedule of solvers with a running time budget
         '''
 
