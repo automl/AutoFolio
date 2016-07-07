@@ -129,6 +129,7 @@ class Validator(object):
                 stat.par1 += used_time
                 stat.solved += 1
                 stat.presolved_feats += 1
+                self.logger.debug("Presolved during feature computation")
                 continue
             elif presolved and used_time >= test_scenario.algorithm_cutoff_time:
                 stat.par1 += test_scenario.algorithm_cutoff_time
@@ -138,13 +139,17 @@ class Validator(object):
             for algo, budget in schedule:
                 time = test_scenario.performance_data[algo][inst]
                 used_time += min(time, budget)
-                if used_time <= test_scenario.algorithm_cutoff_time and test_scenario.runstatus_data[algo][inst] == "ok":
+                if time <= budget and used_time <= test_scenario.algorithm_cutoff_time and test_scenario.runstatus_data[algo][inst] == "ok":
                     stat.par1 += used_time
                     stat.solved += 1
+                    self.logger.debug("Solved by %s (budget: %f -- required to solve: %f)" %(algo, budget, time))
+                    break
 
                 if used_time > test_scenario.algorithm_cutoff_time:
                     stat.par1 += test_scenario.algorithm_cutoff_time
                     stat.timeouts += 1
+                    self.logger.debug("Timeout after %d" %(used_time))
+                    break
 
         if test_scenario.performance_type[0] == "runtime":
             stat.par10 = stat.par1 + 9 * \
