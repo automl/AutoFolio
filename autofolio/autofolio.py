@@ -1,6 +1,7 @@
 import logging
 import functools
 import traceback
+import random
 
 import numpy as np
 
@@ -24,6 +25,9 @@ from autofolio.feature_preprocessing.missing_values import ImputerWrapper
 from autofolio.feature_preprocessing.feature_group_filtering import FeatureGroupFiltering
 from autofolio.feature_preprocessing.standardscaler import StandardScalerWrapper
 
+# presolving
+from autofolio.pre_solving.aspeed_schedule import Aspeed
+
 # classifiers
 from autofolio.selector.classifiers.random_forest import RandomForest
 
@@ -40,9 +44,18 @@ __version__ = "2.0.0"
 
 class AutoFolio(object):
 
-    def __init__(self):
-        ''' Constructor '''
+    def __init__(self, random_seed:int=12345):
+        ''' Constructor 
+            
+            Arguments
+            ---------
+            random_seed: int
+                random seed for numpy and random packages
+        '''
 
+        np.random.seed(random_seed) # fix seed
+        random.seed(random_seed)
+        
         self._root_logger = logging.getLogger()
         self.logger = logging.getLogger("AutoFolio")
         self.cs = None
@@ -94,6 +107,9 @@ class AutoFolio(object):
         ImputerWrapper.add_params(self.cs)
         StandardScalerWrapper.add_params(self.cs)
 
+        # Pre-Solving
+        Aspeed.add_params(cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
+
         # classifiers
         RandomForest.add_params(self.cs)
 
@@ -105,12 +121,12 @@ class AutoFolio(object):
     def get_tuned_config(self, scenario: ASlibScenario):
         '''
             uses SMAC3 to determine a well-performing configuration in the configuration space self.cs on the given scenario
-            
+
             Arguments
             ---------
             scenario: ASlibScenario
                 ASlib Scenario at hand
-            
+
             Returns
             -------
             Configuration
@@ -120,19 +136,21 @@ class AutoFolio(object):
         taf = ExecuteTAFunc(functools.partial(self.run_cv, scenario=scenario))
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
-                             # at most 10 function evaluations
-                             "runcount-limit": 10,
-                             "cs": self.cs,  # configuration space
-                             "deterministic": "true"
-                             })
+                                # at most 10 function evaluations
+                                "runcount-limit": 10,
+                                "cs": self.cs,  # configuration space
+                                "deterministic": "true"
+                                })
 
         # necessary to use stats options related to scenario information
         AC_Stats.scenario = ac_scenario
 
         # Optimize
-        self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        self.logger.info(
+            ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         self.logger.info("Start Configuration")
-        self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        self.logger.info(
+            ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         smbo = SMBO(scenario=ac_scenario, tae_runner=taf,
                     rng=np.random.RandomState(42))
         smbo.run(max_iters=999)
@@ -155,30 +173,31 @@ class AutoFolio(object):
             folds: int
                 number of cv-splits
         '''
+        self.logger.info("Given Configuration: %s" %(config))
 
         try:
             cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
             for i in range(1, folds + 1):
                 self.logger.info("CV-Iteration: %d" % (i))
                 test_scenario, training_scenario = scenario.get_split(indx=i)
-    
-                feature_pre_pipeline, selector = self.fit(
+
+                feature_pre_pipeline, pre_solver, selector = self.fit(
                     scenario=training_scenario, config=config)
-    
+
                 schedules = self.predict(
-                    test_scenario, config, feature_pre_pipeline, selector)
-    
+                    test_scenario, config, feature_pre_pipeline, pre_solver, selector)
+
                 val = Validator()
                 stats = val.validate_runtime(
                     schedules=schedules, test_scenario=test_scenario)
                 cv_stat.merge(stat=stats)
-    
+
             self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
             self.logger.info("CV Stats")
             par10 = cv_stat.show()
         except ValueError:
             traceback.print_exc()
-            par10 = scenario.algorithm_cutoff_time*10
+            par10 = scenario.algorithm_cutoff_time * 10
 
         return par10
 
@@ -202,9 +221,11 @@ class AutoFolio(object):
         scenario, feature_pre_pipeline = self.fit_transform_feature_preprocessing(
             scenario, config)
 
+        pre_solver = self.fit_pre_solving(scenario, config)
+
         selector = self.fit_selector(scenario, config)
 
-        return feature_pre_pipeline, selector
+        return feature_pre_pipeline, pre_solver, selector
 
     def fit_transform_feature_preprocessing(self, scenario: ASlibScenario, config: Configuration):
         '''
@@ -237,6 +258,26 @@ class AutoFolio(object):
 
         return scenario, [fgf, imputer, scaler, pca]
 
+    def fit_pre_solving(self, scenario: ASlibScenario, config: Configuration):
+        '''
+            fits an pre-solving schedule using Aspeed [Hoos et al, 2015 TPLP) 
+
+            Arguments
+            ---------
+            scenario: autofolio.data.aslib_scenario.ASlibScenario
+                aslib scenario at hand
+            config: Configuration
+                parameter configuration to use for preprocessing
+
+            Returns
+            -------
+            instance of Aspeed() with a fitted pre-solving schedule
+        '''
+
+        aspeed = Aspeed()
+        aspeed.fit(scenario=scenario, config=config)
+        return aspeed
+
     def fit_selector(self, scenario: ASlibScenario, config: Configuration):
         '''
             fits an algorithm selector for a given scenario wrt a given configuration
@@ -260,7 +301,7 @@ class AutoFolio(object):
 
         return selector
 
-    def predict(self, scenario: ASlibScenario, config, feature_pre_pipeline, selector):
+    def predict(self, scenario: ASlibScenario, config: Configuration, feature_pre_pipeline: list, pre_solver: Aspeed, selector):
         '''
             predicts algorithm schedules wrt a given config
             and given pipelines
@@ -273,6 +314,8 @@ class AutoFolio(object):
                 parameter configuration
             feature_pre_pipeline: list
                 list of fitted feature preprocessors
+            pre_solver: Aspeed
+                pre solver object with a saved static schedule
             selector: autofolio.selector.*
                 fitted selector object
         '''
@@ -280,7 +323,13 @@ class AutoFolio(object):
         self.logger.info("Predict on Test")
         for f_pre in feature_pre_pipeline:
             scenario = f_pre.transform(scenario)
+            
+        pre_solving_schedule = pre_solver.predict(scenario=scenario)
 
-        schedules = selector.predict(scenario=scenario)
-
-        return schedules
+        pred_schedules = selector.predict(scenario=scenario)
+        
+        # combine schedules
+        if pre_solving_schedule:
+            return dict((inst, schedule + pred_schedules[inst]) for inst, schedule in pre_solving_schedule.items())
+        else:
+            return schedules
