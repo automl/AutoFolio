@@ -38,7 +38,7 @@ class Aspeed(object):
             "presolving", choices=[True, False], default=True)
         cs.add_hyperparameter(pre_solving)
         pre_cutoff = UniformIntegerHyperparameter(
-            "pre:cutoff", lower=0, upper=cutoff, default=math.ceil(cutoff*0.1))
+            "pre:cutoff", lower=0, upper=cutoff, default=math.ceil(cutoff * 0.1))
         cs.add_hyperparameter(pre_cutoff)
         cond = InCondition(child=pre_cutoff, parent=pre_solving, values=[True])
         cs.add_condition(cond)
@@ -77,7 +77,8 @@ class Aspeed(object):
         self.mem_limit = 2000  # mb
         self.cutoff = 60
 
-        self.data_threshold = 300  # number of instances
+        self.data_threshold = 300  # minimal number of instances to use
+        self.data_fraction = 0.3  # fraction of instances to use
 
         self.schedule = []
 
@@ -103,10 +104,13 @@ class Aspeed(object):
             # if the instance set is too large, we subsample it
             if X.shape[0] > self.data_threshold:
                 random_indx = np.random.choice(
-                    range(X.shape[0]), size=self.data_threshold, replace=True)
+                    range(X.shape[0]),
+                    size=min(X.shape[0], max(X.shape[0] * self.data_fraction, self.data_threshold)), 
+                    replace=True)
                 X = X[random_indx, :]
 
-            times = ["time(i%d, %d, %d)." % (i, j, math.ceil(X[i, j]))
+            self.logger.debug("#Instances for pre-solving schedule: %d" %(X.shape[0]))
+            times = ["time(i%d, %d, %d)." % (i, j, max(1,math.ceil(X[i, j])))
                      for i in range(X.shape[0]) for j in range(X.shape[1])]
 
             kappa = "kappa(%d)." % (config["pre:cutoff"])
@@ -141,17 +145,17 @@ class Aspeed(object):
         schedule_dict = {}
         for line in stdout.split("\n"):
             if line.startswith("slice"):
-                schedule_dict = {} # reinitizalize for every found schedule
+                schedule_dict = {}  # reinitizalize for every found schedule
                 slices_str = line.split(" ")
                 for slice in slices_str:
-                    s_tuple = slice.replace("slice(","").rstrip(")").split(",")
+                    s_tuple = slice.replace("slice(", "").rstrip(")").split(",")
                     algo = algorithms[int(s_tuple[1])]
                     budget = int(s_tuple[2])
                     schedule_dict[algo] = budget
         
         self.schedule = sorted(schedule_dict.items(), key=lambda x: x[1])
         
-        self.logger.info("Fitted Schedule: %s" %(self.schedule))
+        self.logger.info("Fitted Schedule: %s" % (self.schedule))
         
     def predict(self, scenario: ASlibScenario):
         '''
