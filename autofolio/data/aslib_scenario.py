@@ -409,7 +409,7 @@ class ASlibScenario(object):
         data = np.array(arff_dict["data"])
         cols = list(map(lambda x: x[0], arff_dict["attributes"][2:]))
         self.feature_data = pd.DataFrame(
-            data[:, 2:], index=data[:, 0], columns=cols)
+            data[:, 2:], index=data[:, 0], columns=cols, dtype=np.float)
         
     def read_feature_costs(self, file_):
         '''
@@ -457,7 +457,7 @@ class ASlibScenario(object):
         data = np.array(arff_dict["data"])
         cols = list(map(lambda x: x[0], arff_dict["attributes"][2:]))
         self.feature_cost_data = pd.DataFrame(
-            data[:, 2:], index=data[:, 0], columns=cols)
+            data[:, 2:], index=data[:, 0], columns=cols, dtype=np.float)
 
         self.feature_cost_data[pd.isnull(self.feature_cost_data)] = 0
 
