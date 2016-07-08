@@ -271,13 +271,15 @@ class AutoFolio(object):
 
             Returns
             -------
-            instance of Aspeed() with a fitted pre-solving schedule
+            instance of Aspeed() with a fitted pre-solving schedule if performance_type of scenario is runtime; else None
         '''
-
-        aspeed = Aspeed()
-        aspeed.fit(scenario=scenario, config=config)
-        return aspeed
-
+        if scenario.performance_type[0] == "runtime":
+            aspeed = Aspeed()
+            aspeed.fit(scenario=scenario, config=config)
+            return aspeed
+        else:
+            return None
+        
     def fit_selector(self, scenario: ASlibScenario, config: Configuration):
         '''
             fits an algorithm selector for a given scenario wrt a given configuration

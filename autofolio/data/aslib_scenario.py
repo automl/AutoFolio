@@ -589,6 +589,15 @@ class ASlibScenario(object):
         '''
             checks whether all data objects are valid according to ASlib specification
         '''
+        
+        if self.performance_measure[0] == "runtime" and self.maximize[0]:
+            self.logger.error("Maximizing runtime is not supported")
+            sys.exit(3)
+
+        if self.performance_measure[0] == "runtime":
+            # replace all non-ok scores with par10 values
+            self.logger.debug("Replace all runtime data with PAR10 values for non-OK runs")
+            self.performance_data[self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
 
         all_data = [self.feature_data, self.feature_cost_data,
                     self.performance_data, self.feature_runstatus_data,
