@@ -27,10 +27,18 @@ class CMDParser(object):
         opt.add_argument("-v", "--verbose", choices=["INFO","DEBUG"], default="INFO", help="verbose level")
         
     def parse(self):
+        '''
+            uses the self._arg_parser object to parse the cmd line arguments
+            
+            Returns
+            -------
+                parsed arguments
+                unknown arguments
+        '''
         
-        self.args_ = self._arg_parser.parse_args()
+        self.args_, misc_params = self._arg_parser.parse_known_args()
         
-        return self.args_
+        return self.args_, misc_params
     
     
     def _check_args(self):

@@ -2,6 +2,7 @@ import logging
 import functools
 import traceback
 import random
+from itertools import tee
 
 import numpy as np
 
@@ -60,13 +61,15 @@ class AutoFolio(object):
         self.logger = logging.getLogger("AutoFolio")
         self.cs = None
 
+        self.overwrite_args = None
+
     def run(self):
         '''
             main method of AutoFolio
         '''
 
         cmd_parser = CMDParser()
-        args_ = cmd_parser.parse()
+        args_, self.overwrite_args = cmd_parser.parse()
 
         self._root_logger.setLevel(args_.verbose)
 
@@ -217,7 +220,10 @@ class AutoFolio(object):
                 list of fitted feature preproccessing objects
                 fitted selector
         '''
-
+        if self.overwrite_args:
+            config = self._overwrite_configuration(config=config, overwrite_args=self.overwrite_args)
+            self.logger.info("Overwritten Configuration: %s" %(config))
+        
         scenario, feature_pre_pipeline = self.fit_transform_feature_preprocessing(
             scenario, config)
 
@@ -226,6 +232,46 @@ class AutoFolio(object):
         selector = self.fit_selector(scenario, config)
 
         return feature_pre_pipeline, pre_solver, selector
+
+    def _overwrite_configuration(self, config: Configuration, overwrite_args:list):
+        '''
+            overwrites a given configuration with some new settings
+            
+            Arguments
+            ---------
+            config: Configuration
+                initial configuration to be adapted
+            overwrite_args: list
+                new parameter settings as a list of strings
+                
+            Returns
+            -------
+            Configuration
+        '''
+        
+        def pairwise(iterable):
+            a, b = tee(iterable)
+            next(b, None)
+            return zip(a, b)
+        
+        dict_conf = config.get_dictionary()
+        for param, value in pairwise(overwrite_args):
+            if dict_conf.get(param):
+                if type(self.cs.get_hyperparameter(param)) is UniformIntegerHyperparameter:
+                    dict_conf[param] = int(value)
+                elif type(self.cs.get_hyperparameter(param)) is UniformFloatHyperparameter:
+                    dict_conf[param] = float(value)
+                elif value == "True":
+                    dict_conf[param] = True
+                elif value == "False":
+                    dict_conf[param] = False
+                else:
+                    dict_conf[param] = value
+            else:
+                self.logger.warn("Unknown given parameter: %s %s" %(param, value))
+        config = Configuration(self.cs, values=dict_conf)
+
+        return config
 
     def fit_transform_feature_preprocessing(self, scenario: ASlibScenario, config: Configuration):
         '''
