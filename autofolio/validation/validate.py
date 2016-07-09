@@ -65,6 +65,7 @@ class Stats(object):
                              (rm_string, self.unsolvable, n_samples))
         else:
             n_samples = self.solved
+            self.logger.info("Number of instances: %d" %(n_samples))
             self.logger.info("Average Solution Quality: %.4f" % (par1 / n_samples))
             par10 = par1
             
@@ -196,6 +197,8 @@ class Validator(object):
                 
             selected_algo = schedule[0][0]
             perf = test_scenario.performance_data[selected_algo][inst]
+            
+            self.logger.debug("Using %s on %s with performance %f" %(selected_algo, inst, perf))
             
             stat.par1 += perf
             stat.solved += 1

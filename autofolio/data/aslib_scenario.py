@@ -291,14 +291,11 @@ class ASlibScenario(object):
 
             self.instances.add(inst_name)
 
-            for p_measure, p_type, max_bool, perf in zip(self.performance_measure, self.performance_type, self.maximize, perf_list):
+            for p_measure, p_type, perf in zip(self.performance_measure, self.performance_type, perf_list):
                 if perf is None:
                     self.logger.warn("The following performance data has missing values.\n" +
                                      "%s" % (",".join(map(str, data))))
                     perf = MAXINT
-
-                if max_bool:
-                    perf *= -1  # we always minimize
 
                 algo_inst_perf[algorithm] = algo_inst_perf.get(algorithm, {})
                 algo_inst_perf[algorithm][inst_name] = (perf, status)
@@ -601,7 +598,7 @@ class ASlibScenario(object):
             self.performance_data[self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
 
         if self.performance_measure[0] == "solution_quality" and self.maximize[0]:
-            self.logger.info("Multiply all performance data by *-1, since we want to minimize but the objective is to maximize")
+            self.logger.info("Multiply all performance data by -1, since we want to minimize but the objective is to maximize")
             self.performance_data *= -1
 
         all_data = [self.feature_data, self.feature_cost_data,
