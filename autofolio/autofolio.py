@@ -6,6 +6,7 @@ from itertools import tee
 import pickle
 
 import numpy as np
+import pandas as pd
 
 from ConfigSpace.configuration_space import Configuration, \
     ConfigurationSpace
@@ -76,8 +77,19 @@ class AutoFolio(object):
 
         if args_.load:
             with open(args_.load, "br") as fp:
-                feature_pre_pipeline, pre_solver, selector, config = pickle.load(fp)
+                feature_names, feature_pre_pipeline, pre_solver, selector, config = pickle.load(fp)
+            for fpp in feature_pre_pipeline:
+                fpp.logger = logging.getLogger("Feature Preprocessing")
+            if pre_solver:
+                pre_solver.logger = logging.getLogger("Aspeed PreSolving")
+            selector.logger = logging.getLogger("Selector")
             # TODO generate pseudo ASLib scenario
+            feature_vec = np.array([list(map(float, args_.feature_vec))])
+            pseudo_scen = ASlibScenario()
+            pseudo_scen.feature_data = pd.DataFrame(feature_vec, index=["pseudo_instance"], columns=feature_names)
+            print(pseudo_scen.feature_data)
+            pred = self.predict(scenario=pseudo_scen, config=config, feature_pre_pipeline=feature_pre_pipeline, pre_solver=pre_solver, selector=selector)
+            print(pred)
         else:
             scenario = ASlibScenario()
             scenario.read_scenario(args_.scenario)
@@ -89,19 +101,23 @@ class AutoFolio(object):
             else:
                 config = self.cs.get_default_configuration()
             self.logger.debug(config)
-    
             
             if args_.save:
                 feature_pre_pipeline, pre_solver, selector = self.fit(scenario=scenario, config=config)
+                self._save_model(args_.save, scenario, feature_pre_pipeline, pre_solver, selector, config)
             else:
                 self.run_cv(config=config, scenario=scenario, folds=10)
 
-    def _save_model(self, feature_pre_pipeline:list, pre_solver:Aspeed, selector, config: Configuration):
+    def _save_model(self, out_fn:str, scenario:ASlibScenario, feature_pre_pipeline:list, pre_solver:Aspeed, selector, config: Configuration):
         '''
             save all pipeline objects for predictions
             
             Arguments
             ---------
+            out_fn: str
+                filename of output file
+            scenario: AslibScenario
+                ASlib scenario with all the data
             feature_pre_pipeline: list
                 list of preprocessing objects
             pre_solver: Aspeed
@@ -111,13 +127,14 @@ class AutoFolio(object):
             config: Configuration
                 parameter setting configuration
         '''
+        scenario.logger = None
         for fpp in feature_pre_pipeline:
             fpp.logger = None
         if pre_solver:
             pre_solver.logger = None
-        selector = None
-        model = [feature_pre_pipeline, pre_solver, selector, config]
-        with open(args_.save, "bw") as fp:
+        selector.logger = None
+        model = [scenario.feature_data.columns, feature_pre_pipeline, pre_solver, selector, config]
+        with open(out_fn, "bw") as fp:
             pickle.dump(model, fp)
 
     def get_cs(self, scenario: ASlibScenario):

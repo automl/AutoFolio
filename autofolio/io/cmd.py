@@ -27,6 +27,8 @@ class CMDParser(object):
         opt.add_argument("-v", "--verbose", choices=["INFO","DEBUG"], default="INFO", help="verbose level")
         opt.add_argument("--save", type=str, default=None, help="trains AutoFolio and saves AutoFolio's state in the given filename")
         opt.add_argument("--load", type=str, default=None, help="loads model (from --save); other modes are disabled with this options")
+        opt.add_argument("--feature_vec", default=None, nargs="*", help="feature vector to predict algorithm to use -- has to be used in combination with --load")
+        
         
     def parse(self):
         '''
