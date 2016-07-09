@@ -3,6 +3,7 @@ import functools
 import traceback
 import random
 from itertools import tee
+import pickle
 
 import numpy as np
 
@@ -73,18 +74,51 @@ class AutoFolio(object):
 
         self._root_logger.setLevel(args_.verbose)
 
-        scenario = ASlibScenario()
-        scenario.read_scenario(args_.scenario)
-
-        self.cs = self.get_cs(scenario)
-
-        if args_.tune:
-            config = self.get_tuned_config(scenario)
+        if args_.load:
+            with open(args_.load, "br") as fp:
+                feature_pre_pipeline, pre_solver, selector, config = pickle.load(fp)
+            # TODO generate pseudo ASLib scenario
         else:
-            config = self.cs.get_default_configuration()
-        self.logger.debug(config)
+            scenario = ASlibScenario()
+            scenario.read_scenario(args_.scenario)
 
-        self.run_cv(config=config, scenario=scenario, folds=10)
+            self.cs = self.get_cs(scenario)
+    
+            if args_.tune:
+                config = self.get_tuned_config(scenario)
+            else:
+                config = self.cs.get_default_configuration()
+            self.logger.debug(config)
+    
+            
+            if args_.save:
+                feature_pre_pipeline, pre_solver, selector = self.fit(scenario=scenario, config=config)
+            else:
+                self.run_cv(config=config, scenario=scenario, folds=10)
+
+    def _save_model(self, feature_pre_pipeline:list, pre_solver:Aspeed, selector, config: Configuration):
+        '''
+            save all pipeline objects for predictions
+            
+            Arguments
+            ---------
+            feature_pre_pipeline: list
+                list of preprocessing objects
+            pre_solver: Aspeed
+                aspeed object with pre-solving schedule
+            selector: autofolio.selector.*
+                fitted selector object
+            config: Configuration
+                parameter setting configuration
+        '''
+        for fpp in feature_pre_pipeline:
+            fpp.logger = None
+        if pre_solver:
+            pre_solver.logger = None
+        selector = None
+        model = [feature_pre_pipeline, pre_solver, selector, config]
+        with open(args_.save, "bw") as fp:
+            pickle.dump(model, fp)
 
     def get_cs(self, scenario: ASlibScenario):
         '''
@@ -234,6 +268,7 @@ class AutoFolio(object):
             Returns
             -------
                 list of fitted feature preproccessing objects
+                pre-solving object
                 fitted selector
         '''
         if self.overwrite_args:

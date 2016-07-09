@@ -25,6 +25,8 @@ class CMDParser(object):
         opt = self._arg_parser.add_argument_group("Optional Options")
         opt.add_argument("-t", "--tune", action="store_true", default=False, help="uses SMAC3 to determine a better parameter configuration")
         opt.add_argument("-v", "--verbose", choices=["INFO","DEBUG"], default="INFO", help="verbose level")
+        opt.add_argument("--save", type=str, default=None, help="trains AutoFolio and saves AutoFolio's state in the given filename")
+        opt.add_argument("--load", type=str, default=None, help="loads model (from --save); other modes are disabled with this options")
         
     def parse(self):
         '''
