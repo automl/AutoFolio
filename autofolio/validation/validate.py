@@ -52,16 +52,22 @@ class Stats(object):
             timeouts = self.timeouts
             par1 = self.par1
             par10 = self.par10
+            
+        if self.runtime_cutoff:
 
-        n_samples = timeouts + self.solved
-        self.logger.info("PAR1: %.4f" % (par1 / n_samples))
-        self.logger.info("PAR10: %.4f" % (par10 / n_samples))
-        self.logger.info("Timeouts: %d / %d" % (timeouts, n_samples))
-        self.logger.info("Presolved during feature computation: %d / %d" %(self.presolved_feats, n_samples))
-        self.logger.info("Solved: %d / %d" % (self.solved, n_samples))
-        self.logger.info("Unsolvable (%s): %d / %d" %
-                         (rm_string, self.unsolvable, n_samples))
-        
+            n_samples = timeouts + self.solved
+            self.logger.info("PAR1: %.4f" % (par1 / n_samples))
+            self.logger.info("PAR10: %.4f" % (par10 / n_samples))
+            self.logger.info("Timeouts: %d / %d" % (timeouts, n_samples))
+            self.logger.info("Presolved during feature computation: %d / %d" % (self.presolved_feats, n_samples))
+            self.logger.info("Solved: %d / %d" % (self.solved, n_samples))
+            self.logger.info("Unsolvable (%s): %d / %d" % 
+                             (rm_string, self.unsolvable, n_samples))
+        else:
+            n_samples = self.solved
+            self.logger.info("Average Solution Quality: %.4f" % (par1 / n_samples))
+            par10 = par1
+            
         return par10 / n_samples
 
     def merge(self, stat):
@@ -88,7 +94,7 @@ class Validator(object):
 
     def validate_runtime(self, schedules: dict, test_scenario: ASlibScenario):
         '''
-            validate selected schedules on test instances
+            validate selected schedules on test instances for runtime
 
             Arguments
             ---------
@@ -97,6 +103,9 @@ class Validator(object):
             test_scenario: ASlibScenario
                 ASlib scenario with test instances
         '''
+        if test_scenario.performance_measure[0] != "runtime":
+            raise ValueError("Cannot validate non-runtime scenario with runtime validation method")
+        
         stat = Stats(runtime_cutoff=test_scenario.algorithm_cutoff_time)
 
         feature_times = False
@@ -113,7 +122,7 @@ class Validator(object):
         stat.unsolvable += unsolvable.sum()
 
         for inst, schedule in schedules.items():
-            self.logger.debug("Validate %s on %s" %(schedule, inst))
+            self.logger.debug("Validate %s on %s" % (schedule, inst))
             used_time = 0
             if feature_times:
                 used_time += f_times[inst]
@@ -142,18 +151,55 @@ class Validator(object):
                 if time <= budget and used_time <= test_scenario.algorithm_cutoff_time and test_scenario.runstatus_data[algo][inst] == "ok":
                     stat.par1 += used_time
                     stat.solved += 1
-                    self.logger.debug("Solved by %s (budget: %f -- required to solve: %f)" %(algo, budget, time))
+                    self.logger.debug("Solved by %s (budget: %f -- required to solve: %f)" % (algo, budget, time))
                     break
 
                 if used_time > test_scenario.algorithm_cutoff_time:
                     stat.par1 += test_scenario.algorithm_cutoff_time
                     stat.timeouts += 1
-                    self.logger.debug("Timeout after %d" %(used_time))
+                    self.logger.debug("Timeout after %d" % (used_time))
                     break
 
-        if test_scenario.performance_type[0] == "runtime":
-            stat.par10 = stat.par1 + 9 * \
-                test_scenario.algorithm_cutoff_time * stat.timeouts
+        stat.par10 = stat.par1 + 9 * \
+            test_scenario.algorithm_cutoff_time * stat.timeouts
+        
         stat.show()
 
+        return stat
+
+    def validate_quality(self, schedules: dict, test_scenario: ASlibScenario):
+        '''
+            validate selected schedules on test instances for solution quality
+
+            Arguments
+            ---------
+            schedules: dict {instance name -> tuples [algo, bugdet]}
+                algorithm schedules per instance
+            test_scenario: ASlibScenario
+                ASlib scenario with test instances
+        '''
+        if test_scenario.performance_measure[0] != "solution_quality":
+            raise ValueError("Cannot validate non-solution_quality scenario with solution_quality validation method")
+        
+        self.logger.debug("FYI: Feature costs and algorithm runstatus is ignored")
+        
+        if test_scenario.maximize[0]:
+            test_scenario.performance_data *= -1
+            self.logger.debug("Removing *-1 in performance data because of maximization")
+        
+        stat = Stats(runtime_cutoff=None)
+        
+        for inst, schedule in schedules.items():
+            if len(schedule) > 1:
+                self.logger.error("AutoFolio does not support schedules for solution quality")
+                sys.exit(9)
+                
+            selected_algo = schedule[0][0]
+            perf = test_scenario.performance_data[selected_algo][inst]
+            
+            stat.par1 += perf
+            stat.solved += 1
+        
+        stat.show(remove_unsolvable=False)
+        
         return stat

@@ -588,6 +588,7 @@ class ASlibScenario(object):
     def check_data(self):
         '''
             checks whether all data objects are valid according to ASlib specification
+            and makes some transformations
         '''
         
         if self.performance_measure[0] == "runtime" and self.maximize[0]:
@@ -598,6 +599,10 @@ class ASlibScenario(object):
             # replace all non-ok scores with par10 values
             self.logger.debug("Replace all runtime data with PAR10 values for non-OK runs")
             self.performance_data[self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
+
+        if self.performance_measure[0] == "solution_quality" and self.maximize[0]:
+            self.logger.info("Multiply all performance data by *-1, since we want to minimize but the objective is to maximize")
+            self.performance_data *= -1
 
         all_data = [self.feature_data, self.feature_cost_data,
                     self.performance_data, self.feature_runstatus_data,

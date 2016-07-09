@@ -54,7 +54,7 @@ class AutoFolio(object):
                 random seed for numpy and random packages
         '''
 
-        np.random.seed(random_seed) # fix seed
+        np.random.seed(random_seed)  # fix seed
         random.seed(random_seed)
         
         self._root_logger = logging.getLogger()
@@ -111,7 +111,8 @@ class AutoFolio(object):
         StandardScalerWrapper.add_params(self.cs)
 
         # Pre-Solving
-        Aspeed.add_params(cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
+        if scenario.performance_measure[0] == "runtime":
+            Aspeed.add_params(cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
 
         # classifiers
         RandomForest.add_params(self.cs)
@@ -176,10 +177,13 @@ class AutoFolio(object):
             folds: int
                 number of cv-splits
         '''
-        self.logger.info("Given Configuration: %s" %(config))
+        self.logger.info("Given Configuration: %s" % (config))
 
         try:
-            cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
+            if scenario.performance_measure[0] == "runtime":
+                cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
+            else:
+                cv_stat = Stats(runtime_cutoff=0)
             for i in range(1, folds + 1):
                 self.logger.info("CV-Iteration: %d" % (i))
                 test_scenario, training_scenario = scenario.get_split(indx=i)
@@ -191,8 +195,14 @@ class AutoFolio(object):
                     test_scenario, config, feature_pre_pipeline, pre_solver, selector)
 
                 val = Validator()
-                stats = val.validate_runtime(
-                    schedules=schedules, test_scenario=test_scenario)
+                if scenario.performance_measure[0] == "runtime":
+                    stats = val.validate_runtime(
+                        schedules=schedules, test_scenario=test_scenario)
+                elif scenario.performance_measure[0] == "solution_quality":
+                    stats = val.validate_quality(
+                        schedules=schedules, test_scenario=test_scenario)
+                else:
+                    raise ValueError("Unknown performance_measure[0]")
                 cv_stat.merge(stat=stats)
 
             self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
@@ -200,7 +210,13 @@ class AutoFolio(object):
             par10 = cv_stat.show()
         except ValueError:
             traceback.print_exc()
-            par10 = scenario.algorithm_cutoff_time * 10
+            if not scenario.maximize[0]:
+                par10 = scenario.algorithm_cutoff_time * 10
+            else:
+                par10 = scenario.algorithm_cutoff_time * -10
+        
+        if scenario.maximize[0]:
+            par10 *= -1
 
         return par10
 
@@ -222,7 +238,7 @@ class AutoFolio(object):
         '''
         if self.overwrite_args:
             config = self._overwrite_configuration(config=config, overwrite_args=self.overwrite_args)
-            self.logger.info("Overwritten Configuration: %s" %(config))
+            self.logger.info("Overwritten Configuration: %s" % (config))
         
         scenario, feature_pre_pipeline = self.fit_transform_feature_preprocessing(
             scenario, config)
@@ -268,7 +284,7 @@ class AutoFolio(object):
                 else:
                     dict_conf[param] = value
             else:
-                self.logger.warn("Unknown given parameter: %s %s" %(param, value))
+                self.logger.warn("Unknown given parameter: %s %s" % (param, value))
         config = Configuration(self.cs, values=dict_conf)
 
         return config
@@ -372,12 +388,15 @@ class AutoFolio(object):
         for f_pre in feature_pre_pipeline:
             scenario = f_pre.transform(scenario)
             
-        pre_solving_schedule = pre_solver.predict(scenario=scenario)
+        if pre_solver:
+            pre_solving_schedule = pre_solver.predict(scenario=scenario)
+        else:
+            pre_solving_schedule = {}
 
         pred_schedules = selector.predict(scenario=scenario)
         
         # combine schedules
         if pre_solving_schedule:
-            return dict((inst, schedule + pred_schedules[inst]) for inst, schedule in pre_solving_schedule.items())
+            return dict((inst, pre_solving_schedule.get(inst, []) + schedule) for inst, schedule in pred_schedules.items())
         else:
-            return schedules
+            return pred_schedules
