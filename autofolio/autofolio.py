@@ -120,6 +120,7 @@ class AutoFolio(object):
             config: Configuration
                 parameter setting configuration
         '''
+        scenario.logger = None
         for fpp in feature_pre_pipeline:
             fpp.logger = None
         if pre_solver:
