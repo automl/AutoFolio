@@ -47,9 +47,9 @@ __version__ = "2.0.0"
 
 class AutoFolio(object):
 
-    def __init__(self, random_seed:int=12345):
+    def __init__(self, random_seed: int=12345):
         ''' Constructor 
-            
+
             Arguments
             ---------
             random_seed: int
@@ -58,16 +58,19 @@ class AutoFolio(object):
 
         np.random.seed(random_seed)  # fix seed
         random.seed(random_seed)
-        
+
+        # I don't know the reason, but without an initial print with
+        # logging.info we don't get any output
+        logging.info("Init AutoFolio")
         self._root_logger = logging.getLogger()
         self.logger = logging.getLogger("AutoFolio")
         self.cs = None
 
         self.overwrite_args = None
 
-    def run(self):
+    def run_cli(self):
         '''
-            main method of AutoFolio
+            main method of AutoFolio based on command line interface
         '''
 
         cmd_parser = CMDParser()
@@ -76,42 +79,32 @@ class AutoFolio(object):
         self._root_logger.setLevel(args_.verbose)
 
         if args_.load:
-            with open(args_.load, "br") as fp:
-                feature_names, feature_pre_pipeline, pre_solver, selector, config = pickle.load(fp)
-            for fpp in feature_pre_pipeline:
-                fpp.logger = logging.getLogger("Feature Preprocessing")
-            if pre_solver:
-                pre_solver.logger = logging.getLogger("Aspeed PreSolving")
-            selector.logger = logging.getLogger("Selector")
-            # TODO generate pseudo ASLib scenario
-            feature_vec = np.array([list(map(float, args_.feature_vec))])
-            pseudo_scen = ASlibScenario()
-            pseudo_scen.feature_data = pd.DataFrame(feature_vec, index=["pseudo_instance"], columns=feature_names)
-            print(pseudo_scen.feature_data)
-            pred = self.predict(scenario=pseudo_scen, config=config, feature_pre_pipeline=feature_pre_pipeline, pre_solver=pre_solver, selector=selector)
-            print(pred)
+            self.read_model_and_predict(
+                model_fn=args_.load, feature_vec=list(map(float, args_.feature_vec)))
         else:
             scenario = ASlibScenario()
             scenario.read_scenario(args_.scenario)
 
             self.cs = self.get_cs(scenario)
-    
+
             if args_.tune:
                 config = self.get_tuned_config(scenario)
             else:
                 config = self.cs.get_default_configuration()
             self.logger.debug(config)
-            
+
             if args_.save:
-                feature_pre_pipeline, pre_solver, selector = self.fit(scenario=scenario, config=config)
-                self._save_model(args_.save, scenario, feature_pre_pipeline, pre_solver, selector, config)
+                feature_pre_pipeline, pre_solver, selector = self.fit(
+                    scenario=scenario, config=config)
+                self._save_model(
+                    args_.save, scenario, feature_pre_pipeline, pre_solver, selector, config)
             else:
                 self.run_cv(config=config, scenario=scenario, folds=10)
 
-    def _save_model(self, out_fn:str, scenario:ASlibScenario, feature_pre_pipeline:list, pre_solver:Aspeed, selector, config: Configuration):
+    def _save_model(self, out_fn: str, scenario: ASlibScenario, feature_pre_pipeline: list, pre_solver: Aspeed, selector, config: Configuration):
         '''
             save all pipeline objects for predictions
-            
+
             Arguments
             ---------
             out_fn: str
@@ -127,15 +120,46 @@ class AutoFolio(object):
             config: Configuration
                 parameter setting configuration
         '''
-        scenario.logger = None
         for fpp in feature_pre_pipeline:
             fpp.logger = None
         if pre_solver:
             pre_solver.logger = None
         selector.logger = None
-        model = [scenario.feature_data.columns, feature_pre_pipeline, pre_solver, selector, config]
+        model = [scenario, feature_pre_pipeline, pre_solver, selector, config]
         with open(out_fn, "bw") as fp:
             pickle.dump(model, fp)
+
+    def read_model_and_predict(self, model_fn: str, feature_vec: list):
+        '''
+            reads saved model from disk and predicts the selected algorithm schedule for a given feature vector
+
+            Arguments
+            --------
+            model_fn: str
+                file name of saved model
+            feature_vec: list
+                instance feature vector as a list of floats 
+        '''
+        with open(model_fn, "br") as fp:
+            scenario, feature_pre_pipeline, pre_solver, selector, config = pickle.load(
+                fp)
+
+        for fpp in feature_pre_pipeline:
+            fpp.logger = logging.getLogger("Feature Preprocessing")
+        if pre_solver:
+            pre_solver.logger = logging.getLogger("Aspeed PreSolving")
+        selector.logger = logging.getLogger("Selector")
+
+        # saved scenario is adapted to given feature vector
+        feature_vec = np.array([feature_vec])
+        scenario.feature_data = pd.DataFrame(
+            feature_vec, index=["pseudo_instance"], columns=scenario.feature_names)
+        scenario.instances = ["pseudo_instance"]
+        pred = self.predict(scenario=scenario, config=config,
+                            feature_pre_pipeline=feature_pre_pipeline, pre_solver=pre_solver, selector=selector)
+
+        print("Selected Schedule [(algorithm, budget)]: %s" % (
+            pred["pseudo_instance"]))
 
     def get_cs(self, scenario: ASlibScenario):
         '''
@@ -163,7 +187,8 @@ class AutoFolio(object):
 
         # Pre-Solving
         if scenario.performance_measure[0] == "runtime":
-            Aspeed.add_params(cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
+            Aspeed.add_params(
+                cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
 
         # classifiers
         RandomForest.add_params(self.cs)
@@ -228,8 +253,6 @@ class AutoFolio(object):
             folds: int
                 number of cv-splits
         '''
-        self.logger.info("Given Configuration: %s" % (config))
-
         try:
             if scenario.performance_measure[0] == "runtime":
                 cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
@@ -265,7 +288,7 @@ class AutoFolio(object):
                 par10 = scenario.algorithm_cutoff_time * 10
             else:
                 par10 = scenario.algorithm_cutoff_time * -10
-        
+
         if scenario.maximize[0]:
             par10 *= -1
 
@@ -288,10 +311,13 @@ class AutoFolio(object):
                 pre-solving object
                 fitted selector
         '''
+        self.logger.info("Given Configuration: %s" % (config))
+
         if self.overwrite_args:
-            config = self._overwrite_configuration(config=config, overwrite_args=self.overwrite_args)
+            config = self._overwrite_configuration(
+                config=config, overwrite_args=self.overwrite_args)
             self.logger.info("Overwritten Configuration: %s" % (config))
-        
+
         scenario, feature_pre_pipeline = self.fit_transform_feature_preprocessing(
             scenario, config)
 
@@ -301,27 +327,27 @@ class AutoFolio(object):
 
         return feature_pre_pipeline, pre_solver, selector
 
-    def _overwrite_configuration(self, config: Configuration, overwrite_args:list):
+    def _overwrite_configuration(self, config: Configuration, overwrite_args: list):
         '''
             overwrites a given configuration with some new settings
-            
+
             Arguments
             ---------
             config: Configuration
                 initial configuration to be adapted
             overwrite_args: list
                 new parameter settings as a list of strings
-                
+
             Returns
             -------
             Configuration
         '''
-        
+
         def pairwise(iterable):
             a, b = tee(iterable)
             next(b, None)
             return zip(a, b)
-        
+
         dict_conf = config.get_dictionary()
         for param, value in pairwise(overwrite_args):
             if dict_conf.get(param):
@@ -336,7 +362,8 @@ class AutoFolio(object):
                 else:
                     dict_conf[param] = value
             else:
-                self.logger.warn("Unknown given parameter: %s %s" % (param, value))
+                self.logger.warn(
+                    "Unknown given parameter: %s %s" % (param, value))
         config = Configuration(self.cs, values=dict_conf)
 
         return config
@@ -393,7 +420,7 @@ class AutoFolio(object):
             return aspeed
         else:
             return None
-        
+
     def fit_selector(self, scenario: ASlibScenario, config: Configuration):
         '''
             fits an algorithm selector for a given scenario wrt a given configuration
@@ -439,14 +466,14 @@ class AutoFolio(object):
         self.logger.info("Predict on Test")
         for f_pre in feature_pre_pipeline:
             scenario = f_pre.transform(scenario)
-            
+
         if pre_solver:
             pre_solving_schedule = pre_solver.predict(scenario=scenario)
         else:
             pre_solving_schedule = {}
 
         pred_schedules = selector.predict(scenario=scenario)
-        
+
         # combine schedules
         if pre_solving_schedule:
             return dict((inst, pre_solving_schedule.get(inst, []) + schedule) for inst, schedule in pred_schedules.items())

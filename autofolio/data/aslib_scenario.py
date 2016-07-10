@@ -7,6 +7,7 @@ import yaml
 import functools
 import arff  # liac-arff
 import copy
+import json
 
 __author__ = "Marius Lindauer"
 __version__ = "2.0.0"
@@ -70,7 +71,33 @@ class ASlibScenario(object):
         }
 
         self.CHECK_VALID = True
-
+        
+    def __getstate__(self):
+        '''
+            method for pickling the object; only meta data is pickled -- not the full scenario data
+        '''
+        #state_dict = copy.copy(self.__dict__)
+        state_dict = self.__dict__
+        
+        # adding explicitly the feature names as used before
+        state_dict["feature_names"] = list(self.feature_data.columns)
+        
+        #=======================================================================
+        # del state_dict["feature_data"]
+        # del state_dict["performance_data"]
+        # del state_dict["runstatus_data"]
+        # del state_dict["feature_cost_data"]
+        # del state_dict["feature_runstatus_data"]
+        # del state_dict["ground_truth_data"]
+        # del state_dict["cv_data"] 
+        # del state_dict["instances"]
+        # del state_dict["read_funcs"]
+        # del state_dict["found_files"]
+        # del state_dict["logger"]
+        #=======================================================================
+        
+        return state_dict
+        
     def read_scenario(self, dn):
         '''
             read an ASlib scenario from disk
@@ -80,7 +107,7 @@ class ASlibScenario(object):
             dn: str
                 directory name with ASlib files
         '''
-        logging.info("Read ASlib scenario: %s" % (dn))
+        self.logger.info("Read ASlib scenario: %s" % (dn))
 
         # add command line arguments in metainfo
         self.dir_ = dn
@@ -167,7 +194,7 @@ class ASlibScenario(object):
         if self.algorithms_stochastic is None:
             self.algorithms_stochastic = set()
         self.feature_group_dict = description.get('feature_steps')
-        self.feature_steps = self.feature_group_dict.keys()
+        self.feature_steps = list(self.feature_group_dict.keys())
         self.feature_steps_default = description.get('default_steps')
 
         for step, d in self.feature_group_dict.items():
