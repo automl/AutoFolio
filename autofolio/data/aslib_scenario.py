@@ -71,33 +71,81 @@ class ASlibScenario(object):
         }
 
         self.CHECK_VALID = True
-        
+
     def __getstate__(self):
         '''
-            method for pickling the object; only meta data is pickled -- not the full scenario data
+            method for pickling the object;
         '''
         #state_dict = copy.copy(self.__dict__)
         state_dict = self.__dict__
-        
+
         # adding explicitly the feature names as used before
         state_dict["feature_names"] = list(self.feature_data.columns)
-        
-        #=======================================================================
-        # del state_dict["feature_data"]
-        # del state_dict["performance_data"]
-        # del state_dict["runstatus_data"]
-        # del state_dict["feature_cost_data"]
-        # del state_dict["feature_runstatus_data"]
-        # del state_dict["ground_truth_data"]
-        # del state_dict["cv_data"] 
-        # del state_dict["instances"]
-        # del state_dict["read_funcs"]
-        # del state_dict["found_files"]
-        # del state_dict["logger"]
-        #=======================================================================
-        
+
         return state_dict
+
+    def read_from_csv(self, perf_fn: str, feat_fn: str, objective: str, runtime_cutoff: float, maximize: bool):
+        '''
+            create an internal ASlib scenario from csv
+
+            Arguments
+            ---------
+            perf_fn: str
+                performance file name in csv format
+            feat_fn: str
+                instance feature file name in csv format
+            objective: str
+                "solution_quality" or "runtime"
+            runtime_cutoff: float
+                maximal runtime cutoff
+            maximize: bool
+                whether to maximize or minimize the objective values
+        '''
+
+        self.scenario = None  # string
+        self.performance_measure = ["dummy"]  # list of strings
+        # list of "runtime" or "solution_quality"
+        self.performance_type = [objective]
+        self.maximize = [maximize]  # list of "true" or "false"
+        self.algorithm_cutoff_time = runtime_cutoff  # float
+        self.algorithm_cutoff_memory = None  # integer
+        self.features_cutoff_time = None  # float
+        self.features_cutoff_memory = None  # integer
+
+        self.feature_data = pd.read_csv(feat_fn)
+        self.performance_data = pd.read_csv(perf_fn)
+
+        self.algorithms = list(performance_data.columns)  # list of strings
+        self.algortihms_deterministics = self.algorithms  # list of strings
+        self.algorithms_stochastic = []  # list of strings
+
+        self.features_deterministic = list(
+            self.feature_data.columns)  # list of strings
+        self.features_stochastic = []  # list of strings
+        self.feature_group_dict = {"all": self.features_deterministic}
+        self.feature_steps = ["all"]
+
+        self.instances = list(self.feature_data.index)  # lis
+
+        self.runstatus_data = pd.DataFrame(
+            values=np.array(
+                [["ok"] * len(self.algorithms)] * len(self.instances)),
+            index=self.performance_data.index,
+            columns=self.performance_data.columns)
         
+        if objective == "runtime":
+            self.runstatus_data[
+                self.performance_data >= runtime_cutoff] = "timeout"
+
+        self.feature_cost_data = None
+        self.feature_runstatus_data = None
+        self.ground_truth_data = None
+
+        # extracted in other files
+        self.features = self.features_deterministic
+        self.ground_truths = {}  # type -> [values]
+        self.cv_given = False
+
     def read_scenario(self, dn):
         '''
             read an ASlib scenario from disk
@@ -434,7 +482,7 @@ class ASlibScenario(object):
         cols = list(map(lambda x: x[0], arff_dict["attributes"][2:]))
         self.feature_data = pd.DataFrame(
             data[:, 2:], index=data[:, 0], columns=cols, dtype=np.float)
-        
+
     def read_feature_costs(self, file_):
         '''
             reads feature time file
@@ -614,18 +662,21 @@ class ASlibScenario(object):
             checks whether all data objects are valid according to ASlib specification
             and makes some transformations
         '''
-        
+
         if self.performance_measure[0] == "runtime" and self.maximize[0]:
             self.logger.error("Maximizing runtime is not supported")
             sys.exit(3)
 
         if self.performance_measure[0] == "runtime":
             # replace all non-ok scores with par10 values
-            self.logger.debug("Replace all runtime data with PAR10 values for non-OK runs")
-            self.performance_data[self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
+            self.logger.debug(
+                "Replace all runtime data with PAR10 values for non-OK runs")
+            self.performance_data[
+                self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
 
         if self.performance_measure[0] == "solution_quality" and self.maximize[0]:
-            self.logger.info("Multiply all performance data by -1, since we want to minimize but the objective is to maximize")
+            self.logger.info(
+                "Multiply all performance data by -1, since we want to minimize but the objective is to maximize")
             self.performance_data *= -1
 
         all_data = [self.feature_data, self.feature_cost_data,
@@ -674,13 +725,18 @@ class ASlibScenario(object):
 
         # feature_data
         test.feature_data = test.feature_data.drop(training_insts).sort_index()
-        training.feature_data = training.feature_data.drop(test_insts).sort_index()
+        training.feature_data = training.feature_data.drop(
+            test_insts).sort_index()
         # performance_data
-        test.performance_data = test.performance_data.drop(training_insts).sort_index()
-        training.performance_data = training.performance_data.drop(test_insts).sort_index()
+        test.performance_data = test.performance_data.drop(
+            training_insts).sort_index()
+        training.performance_data = training.performance_data.drop(
+            test_insts).sort_index()
         # runstatus_data
-        test.runstatus_data = test.runstatus_data.drop(training_insts).sort_index()
-        training.runstatus_data = training.runstatus_data.drop(test_insts).sort_index()
+        test.runstatus_data = test.runstatus_data.drop(
+            training_insts).sort_index()
+        training.runstatus_data = training.runstatus_data.drop(
+            test_insts).sort_index()
         # self.feature_runstatus_data
         test.feature_runstatus_data = test.feature_runstatus_data.drop(
             training_insts).sort_index()
