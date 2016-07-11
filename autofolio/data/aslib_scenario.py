@@ -752,7 +752,7 @@ class ASlibScenario(object):
                 number of splits
         '''
 
-        kf = KFold(len(self.instances), n_folds=n_folds)
+        kf = KFold(len(self.instances), n_folds=n_folds, shuffle=True)
         self.cv_data = pd.DataFrame(
             data=np.zeros(len(self.instances)), index=self.instances, columns=["fold"], dtype=np.float)
 
