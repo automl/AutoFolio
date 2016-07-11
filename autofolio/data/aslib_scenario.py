@@ -1,13 +1,15 @@
 import os
 import sys
-import pandas as pd
-import numpy as np
 import logging
 import yaml
 import functools
 import arff  # liac-arff
 import copy
 import json
+
+from sklearn.cross_validation import KFold
+import pandas as pd
+import numpy as np
 
 __author__ = "Marius Lindauer"
 __version__ = "2.0.0"
@@ -44,11 +46,11 @@ class ASlibScenario(object):
         self.algorithms_stochastic = []  # list of strings
         self.feature_group_dict = {}  # string -> [] of strings
         self.feature_steps = []
+        self.feature_steps_default = []
 
         # extracted in other files
         self.features = []
         self.ground_truths = {}  # type -> [values]
-        self.cv_given = False
 
         self.feature_data = None
         self.performance_data = None
@@ -56,6 +58,7 @@ class ASlibScenario(object):
         self.feature_cost_data = None
         self.feature_runstatus_data = None
         self.ground_truth_data = None
+        self.cv_data = None
 
         self.instances = None  # list
 
@@ -112,39 +115,48 @@ class ASlibScenario(object):
         self.features_cutoff_time = None  # float
         self.features_cutoff_memory = None  # integer
 
-        self.feature_data = pd.read_csv(feat_fn)
-        self.performance_data = pd.read_csv(perf_fn)
+        self.feature_data = pd.read_csv(feat_fn, index_col=0)
+        self.performance_data = pd.read_csv(perf_fn, index_col=0)
 
-        self.algorithms = list(performance_data.columns)  # list of strings
+        self.algorithms = list(
+            self.performance_data.columns)  # list of strings
         self.algortihms_deterministics = self.algorithms  # list of strings
         self.algorithms_stochastic = []  # list of strings
 
         self.features_deterministic = list(
             self.feature_data.columns)  # list of strings
         self.features_stochastic = []  # list of strings
-        self.feature_group_dict = {"all": self.features_deterministic}
+        self.feature_group_dict = {
+            "all": {"provides": self.features_deterministic}}
         self.feature_steps = ["all"]
+        self.feature_steps_default = ["all"]
 
         self.instances = list(self.feature_data.index)  # lis
 
         self.runstatus_data = pd.DataFrame(
-            values=np.array(
+            data=np.array(
                 [["ok"] * len(self.algorithms)] * len(self.instances)),
             index=self.performance_data.index,
             columns=self.performance_data.columns)
-        
+
         if objective == "runtime":
             self.runstatus_data[
                 self.performance_data >= runtime_cutoff] = "timeout"
 
+        self.feature_runstatus_data = pd.DataFrame(
+            data=["ok"] * len(self.instances), index=self.instances, columns=["all"])
+
         self.feature_cost_data = None
-        self.feature_runstatus_data = None
         self.ground_truth_data = None
 
         # extracted in other files
         self.features = self.features_deterministic
         self.ground_truths = {}  # type -> [values]
-        self.cv_given = False
+
+        self.create_cv_splits()
+
+        if self.CHECK_VALID:
+            self.check_data()
 
     def read_scenario(self, dn):
         '''
@@ -355,53 +367,18 @@ class ASlibScenario(object):
 
         algo_inst_perf = {}
 
-        self.instances = set()
-
-        for data in arff_dict["data"]:
-            inst_name = str(data[0])
-            repetition = data[1]
-            algorithm = str(data[2])
-            perf_list = data[3:-1]
-            status = data[-1]
-
-            self.instances.add(inst_name)
-
-            for p_measure, p_type, perf in zip(self.performance_measure, self.performance_type, perf_list):
-                if perf is None:
-                    self.logger.warn("The following performance data has missing values.\n" +
-                                     "%s" % (",".join(map(str, data))))
-                    perf = MAXINT
-
-                algo_inst_perf[algorithm] = algo_inst_perf.get(algorithm, {})
-                algo_inst_perf[algorithm][inst_name] = (perf, status)
-
-                # TODO: we consider only the first performance value right now
-                break
-
-            if (inst_name, repetition, algorithm) in pairs_inst_rep_alg:
-                self.logger.warn("Pair (%s,%s,%s) is not unique in %s" % (
-                    inst_name, repetition, algorithm, file_))
-            else:
-                pairs_inst_rep_alg.append((inst_name, repetition, algorithm))
-
-        # convert to panda
-
-        perf_array = []
-        status_array = []
-        self.instances = list(self.instances)
-        for inst in self.instances:
-            perf_vec = []
-            status_vec = []
-            for algo in self.algorithms:
-                perf_vec.append(algo_inst_perf[algo][inst][0])
-                status_vec.append(algo_inst_perf[algo][inst][1])
-            perf_array.append(perf_vec)
-            status_array.append(status_vec)
-
         self.performance_data = pd.DataFrame(
-            perf_array, index=self.instances, columns=self.algorithms)
+            np.array(arff_dict["data"])[:,:4], columns=["instance_id", "repetition", "algorithm", "score"]) # take only the first 4 columns
+        self.performance_data.drop("repetition", axis=1) 
+        self.performance_data = self.performance_data.pivot("instance_id", "algorithm", "score")
+        self.performance_data = self.performance_data.apply(lambda x: pd.to_numeric(x))
+        
         self.runstatus_data = pd.DataFrame(
-            status_array, index=self.instances, columns=self.algorithms)
+            np.array(arff_dict["data"])[:,[0,1,2,-1]], columns=["instance_id", "repetition", "algorithm", "runstatus"]) # take only the first 4 columns
+        self.runstatus_data.drop("repetition", axis=1) 
+        self.runstatus_data = self.runstatus_data.pivot("instance_id", "algorithm", "runstatus")
+        
+        self.instances = list(self.performance_data.index)
 
     def read_feature_values(self, file_):
         '''
@@ -663,20 +640,20 @@ class ASlibScenario(object):
             and makes some transformations
         '''
 
-        if self.performance_measure[0] == "runtime" and self.maximize[0]:
+        if self.performance_type[0] == "runtime" and self.maximize[0]:
             self.logger.error("Maximizing runtime is not supported")
             sys.exit(3)
 
-        if self.performance_measure[0] == "runtime":
+        if self.performance_type[0] == "runtime":
             # replace all non-ok scores with par10 values
             self.logger.debug(
                 "Replace all runtime data with PAR10 values for non-OK runs")
             self.performance_data[
                 self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
 
-        if self.performance_measure[0] == "solution_quality" and self.maximize[0]:
+        if self.performance_type[0] == "solution_quality" and self.maximize[0]:
             self.logger.info(
-                "Multiply all performance data by -1, since we want to minimize but the objective is to maximize")
+                "Multiply all performance data by -1, since autofolio minimizes the scores but the objective is to maximize")
             self.performance_data *= -1
 
         all_data = [self.feature_data, self.feature_cost_data,
@@ -712,8 +689,9 @@ class ASlibScenario(object):
         '''
 
         if self.cv_data is None:
-            raise ValueError(
-                "The ASlib scenario has not provided any cv.arff -- cannot get split data")
+            self.logger.warn(
+                "The ASlib scenario has not provided any cv.arff; create CV split...")
+            self.create_cv_splits()
 
         test_insts = self.cv_data[
             self.cv_data["fold"] == float(indx)].index.tolist()
@@ -763,3 +741,21 @@ class ASlibScenario(object):
         self.used_feature_groups = None
 
         return test, training
+
+    def create_cv_splits(self, n_folds: int=10):
+        '''
+            creates cv splits and saves them in self.cv_data
+
+            Argumnents
+            ----------
+            n_folds: int
+                number of splits
+        '''
+
+        kf = KFold(len(self.instances), n_folds=n_folds)
+        self.cv_data = pd.DataFrame(
+            data=np.zeros(len(self.instances)), index=self.instances, columns=["fold"], dtype=np.float)
+
+        for indx, (train, test) in enumerate(kf):
+            # print(self.cv_data.loc(np.array(self.instances[test]).tolist()))
+            self.cv_data.iloc[test] = indx + 1.

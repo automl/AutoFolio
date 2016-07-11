@@ -104,7 +104,7 @@ class Validator(object):
             test_scenario: ASlibScenario
                 ASlib scenario with test instances
         '''
-        if test_scenario.performance_measure[0] != "runtime":
+        if test_scenario.performance_type[0] != "runtime":
             raise ValueError("Cannot validate non-runtime scenario with runtime validation method")
         
         stat = Stats(runtime_cutoff=test_scenario.algorithm_cutoff_time)
@@ -179,7 +179,7 @@ class Validator(object):
             test_scenario: ASlibScenario
                 ASlib scenario with test instances
         '''
-        if test_scenario.performance_measure[0] != "solution_quality":
+        if test_scenario.performance_type[0] != "solution_quality":
             raise ValueError("Cannot validate non-solution_quality scenario with solution_quality validation method")
         
         self.logger.debug("FYI: Feature costs and algorithm runstatus is ignored")

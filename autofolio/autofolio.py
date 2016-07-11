@@ -82,8 +82,16 @@ class AutoFolio(object):
             self.read_model_and_predict(
                 model_fn=args_.load, feature_vec=list(map(float, args_.feature_vec)))
         else:
+
             scenario = ASlibScenario()
-            scenario.read_scenario(args_.scenario)
+            if args_.scenario:
+                scenario.read_scenario(args_.scenario)
+            elif args_.performance_csv and args_.feature_csv:
+                scenario.read_from_csv(perf_fn=args_.performance_csv,
+                                       feat_fn=args_.feature_csv,
+                                       objective=args_.objective,
+                                       runtime_cutoff=args_.runtime_cutoff,
+                                       maximize=args_.maximize)
 
             self.cs = self.get_cs(scenario)
 
@@ -187,7 +195,7 @@ class AutoFolio(object):
         StandardScalerWrapper.add_params(self.cs)
 
         # Pre-Solving
-        if scenario.performance_measure[0] == "runtime":
+        if scenario.performance_type[0] == "runtime":
             Aspeed.add_params(
                 cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
 
@@ -255,7 +263,7 @@ class AutoFolio(object):
                 number of cv-splits
         '''
         try:
-            if scenario.performance_measure[0] == "runtime":
+            if scenario.performance_type[0] == "runtime":
                 cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
             else:
                 cv_stat = Stats(runtime_cutoff=0)
@@ -270,14 +278,14 @@ class AutoFolio(object):
                     test_scenario, config, feature_pre_pipeline, pre_solver, selector)
 
                 val = Validator()
-                if scenario.performance_measure[0] == "runtime":
+                if scenario.performance_type[0] == "runtime":
                     stats = val.validate_runtime(
                         schedules=schedules, test_scenario=test_scenario)
-                elif scenario.performance_measure[0] == "solution_quality":
+                elif scenario.performance_type[0] == "solution_quality":
                     stats = val.validate_quality(
                         schedules=schedules, test_scenario=test_scenario)
                 else:
-                    raise ValueError("Unknown performance_measure[0]")
+                    raise ValueError("Unknown performance_type[0]")
                 cv_stat.merge(stat=stats)
 
             self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
