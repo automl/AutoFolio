@@ -5,7 +5,6 @@ import yaml
 import functools
 import arff  # liac-arff
 import copy
-import json
 
 from sklearn.cross_validation import KFold
 import pandas as pd
@@ -53,7 +52,7 @@ class ASlibScenario(object):
         self.ground_truths = {}  # type -> [values]
 
         self.feature_data = None
-        self.performance_data = None
+        self.performance_data = []
         self.runstatus_data = None
         self.feature_cost_data = None
         self.feature_runstatus_data = None
@@ -79,7 +78,7 @@ class ASlibScenario(object):
         '''
             method for pickling the object;
         '''
-        #state_dict = copy.copy(self.__dict__)
+        #  state_dict = copy.copy(self.__dict__)
         state_dict = self.__dict__
 
         # adding explicitly the feature names as used before
@@ -228,8 +227,7 @@ class ASlibScenario(object):
             [description.get('performance_measures')]
 
         maximize = description.get('maximize')
-        self.maximize = maximize if isinstance(maximize, list) else \
-            [maximize]
+        self.maximize = maximize if isinstance(maximize, list) else [maximize]
 
         performance_type = description.get('performance_type')
         self.performance_type  = performance_type if isinstance(performance_type, list) else \
@@ -363,22 +361,26 @@ class ASlibScenario(object):
                 "runstatus as last attribute is missing in %s" % (file_))
             sys.exit(3)
 
-        pairs_inst_rep_alg = []
+        algo_inst_col = ['instance_id', 'repetition', 'algorithm']
+        perf_col = []
+        for perf in self.performance_measure:
+            perf_col.append(perf)
+        status_col = ['runstatus']
 
-        algo_inst_perf = {}
+        perf_data = pd.DataFrame(arff_dict['data'],
+                                 columns=algo_inst_col+perf_col+status_col)
+        perf_data.drop('repetition', axis=1, inplace=True)
 
-        self.performance_data = pd.DataFrame(
-            np.array(arff_dict["data"])[:,:4], columns=["instance_id", "repetition", "algorithm", "score"]) # take only the first 4 columns
-        self.performance_data.drop("repetition", axis=1) 
-        self.performance_data = self.performance_data.pivot("instance_id", "algorithm", "score")
-        self.performance_data = self.performance_data.apply(lambda x: pd.to_numeric(x))
-        
-        self.runstatus_data = pd.DataFrame(
-            np.array(arff_dict["data"])[:,[0,1,2,-1]], columns=["instance_id", "repetition", "algorithm", "runstatus"]) # take only the first 4 columns
-        self.runstatus_data.drop("repetition", axis=1) 
-        self.runstatus_data = self.runstatus_data.pivot("instance_id", "algorithm", "runstatus")
-        
-        self.instances = list(self.performance_data.index)
+        self.runstatus_data = \
+            perf_data.pivot('instance_id', 'algorithm', 'runstatus')
+        perf_data.drop('runstatus', axis=1, inplace=True)
+
+        for perf in self.performance_measure:
+            self.performance_data.append(
+                perf_data.pivot('instance_id', 'algorithm', perf))
+            perf_data.drop(perf, axis=1, inplace=True)
+
+        self.instances = list(self.performance_data[0].index)
 
     def read_feature_values(self, file_):
         '''
@@ -640,25 +642,30 @@ class ASlibScenario(object):
             and makes some transformations
         '''
 
-        if self.performance_type[0] == "runtime" and self.maximize[0]:
-            self.logger.error("Maximizing runtime is not supported")
-            sys.exit(3)
+        for perf_type_i, perf_type in enumerate(self.performance_type):
 
-        if self.performance_type[0] == "runtime":
-            # replace all non-ok scores with par10 values
-            self.logger.debug(
-                "Replace all runtime data with PAR10 values for non-OK runs")
-            self.performance_data[
-                self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
-
-        if self.performance_type[0] == "solution_quality" and self.maximize[0]:
-            self.logger.info(
-                "Multiply all performance data by -1, since autofolio minimizes the scores but the objective is to maximize")
-            self.performance_data *= -1
-
+            if perf_type == "runtime" and self.maximize[perf_type_i]:
+                self.logger.error("Maximizing runtime is not supported")
+                sys.exit(3)
+    
+            if perf_type == "runtime":
+                # replace all non-ok scores with par10 values
+                self.logger.debug(
+                    "Replace all runtime data with PAR10 values for non-OK runs")
+                self.performance_data[perf_type_i][
+                    self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
+    
+            if perf_type == "solution_quality" and self.maximize[perf_type_i]:
+                self.logger.info(
+                    "Multiply all performance data by -1, since autofolio minimizes the scores but the objective is to maximize")
+                self.performance_data[perf_type_i] *= -1
+    
         all_data = [self.feature_data, self.feature_cost_data,
-                    self.performance_data, self.feature_runstatus_data,
-                    self.ground_truth_data, self.cv_data]
+                        self.feature_runstatus_data, self.ground_truth_data,
+                        self.cv_data]
+
+        for perf_data in self.performance_data:
+            all_data.append(perf_data)
 
         # all data should have the same instances
         set_insts = set(self.instances)
@@ -759,3 +766,4 @@ class ASlibScenario(object):
         for indx, (train, test) in enumerate(kf):
             # print(self.cv_data.loc(np.array(self.instances[test]).tolist()))
             self.cv_data.iloc[test] = indx + 1.
+
