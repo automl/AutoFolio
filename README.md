@@ -89,6 +89,6 @@ To use algorithm configuration to optimize the performance of AutoFolio please u
   pages     = {745-778}
 }
 
-## Author
+## Contact
 
-Marius Lindauer
+Marius Lindauer: lindauer@cs.uni-freiburg.de
