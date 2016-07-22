@@ -84,7 +84,7 @@ To use algorithm configuration to optimize the performance of AutoFolio please u
   author    = {M. Lindauer and H. Hoos and F. Hutter and T. Schaub},
   title     = {AutoFolio: An automatically configured Algorithm Selector},
   volume    = {53},
-  journal   = {Journal of Artificial Intelligence},
+  journal   = {Journal of Artificial Intelligence Research},
   year      = {2015},
   pages     = {745-778}
 }
