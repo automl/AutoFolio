@@ -52,7 +52,8 @@ class ASlibScenario(object):
         self.ground_truths = {}  # type -> [values]
 
         self.feature_data = None
-        self.performance_data = []
+        self.performance_data = None
+        self.performance_data_all = []
         self.runstatus_data = None
         self.feature_cost_data = None
         self.feature_runstatus_data = None
@@ -376,11 +377,13 @@ class ASlibScenario(object):
         perf_data.drop('runstatus', axis=1, inplace=True)
 
         for perf in self.performance_measure:
-            self.performance_data.append(
+            self.performance_data_all.append(
                 perf_data.pivot('instance_id', 'algorithm', perf))
             perf_data.drop(perf, axis=1, inplace=True)
 
-        self.instances = list(self.performance_data[0].index)
+        self.performance_data = self.performance_data_all[0]
+
+        self.instances = list(self.performance_data.index)
 
     def read_feature_values(self, file_):
         '''
@@ -652,19 +655,19 @@ class ASlibScenario(object):
                 # replace all non-ok scores with par10 values
                 self.logger.debug(
                     "Replace all runtime data with PAR10 values for non-OK runs")
-                self.performance_data[perf_type_i][
+                self.performance_data_all[perf_type_i][
                     self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
     
             if perf_type == "solution_quality" and self.maximize[perf_type_i]:
                 self.logger.info(
                     "Multiply all performance data by -1, since autofolio minimizes the scores but the objective is to maximize")
-                self.performance_data[perf_type_i] *= -1
+                self.performance_data_all[perf_type_i] *= -1
     
         all_data = [self.feature_data, self.feature_cost_data,
                         self.feature_runstatus_data, self.ground_truth_data,
                         self.cv_data]
 
-        for perf_data in self.performance_data:
+        for perf_data in self.performance_data_all:
             all_data.append(perf_data)
 
         # all data should have the same instances
@@ -766,4 +769,25 @@ class ASlibScenario(object):
         for indx, (train, test) in enumerate(kf):
             # print(self.cv_data.loc(np.array(self.instances[test]).tolist()))
             self.cv_data.iloc[test] = indx + 1.
+            
+    def change_perf_measure(self, measure_idx:int = None, measure_name:str = None):
+        '''
+            change self.performance_data to another performance measure. 
+            Either measure_idx or measure_name needs to be specified --
+            measure_name overwrites measure_idx
+            
+            Arguments
+            ---------
+            measure_idx : int
+                index of performance measure
+            measure_name: str
+                name of performance measure
+        '''
+        if measure_name:
+            measure_idx = self.performance_measure.index(measure_name)
+        
+        if measure_idx:
+            self.performance_data = self.performance_data_all[measure_idx]
+        
+        
 
