@@ -229,6 +229,9 @@ class ASlibScenario(object):
 
         maximize = description.get('maximize')
         self.maximize = maximize if isinstance(maximize, list) else [maximize]
+        for maxi in self.maximize:
+            if not isinstance(maxi, bool):
+                raise ValueError("\"maximize\" in description.txt has to be a bool (i.e., not a string).")
 
         performance_type = description.get('performance_type')
         self.performance_type  = performance_type if isinstance(performance_type, list) else \
