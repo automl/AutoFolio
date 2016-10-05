@@ -267,8 +267,7 @@ class ASlibScenario(object):
             set(self.algorithms_stochastic).union(
                 self.algortihms_deterministics)))
 
-        self.algorithms = sorted(list(
-            set(self.algorithms_stochastic).union(self.algortihms_deterministics)))
+        self.algorithms = list(map(str,self.algorithms)) # if algorithms as numerical IDs, yaml interprets them as integers and not as string
 
         if not self.scenario:
             self.logger.warn("Have not found SCENARIO_ID")
