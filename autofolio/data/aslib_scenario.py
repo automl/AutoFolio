@@ -206,10 +206,10 @@ class ASlibScenario(object):
             iterates over all found files (self.found_files) and 
             calls the corresponding function to validate file
         '''
-        for file_ in self.found_files:
-            read_func = self.read_funcs.get(os.path.basename(file_))
+        for fn in self.found_files:
+            read_func = self.read_funcs.get(os.path.basename(fn))
             if read_func:
-                read_func(file_)
+                read_func(fn)
 
     def read_description(self, fn):
         '''
@@ -336,32 +336,32 @@ class ASlibScenario(object):
                 arff_dict = arff.load(fp)
             except arff.BadNominalValue:
                 self.logger.error(
-                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (file_))
+                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (fn))
 
         if arff_dict["attributes"][0][0].upper() != "INSTANCE_ID":
             self.logger.error(
-                "instance_id as first attribute is missing in %s" % (file_))
+                "instance_id as first attribute is missing in %s" % (fn))
             sys.exit(3)
         if arff_dict["attributes"][1][0].upper() != "REPETITION":
             self.logger.error(
-                "repetition as second attribute is missing in %s" % (file_))
+                "repetition as second attribute is missing in %s" % (fn))
             sys.exit(3)
         if arff_dict["attributes"][2][0].upper() != "ALGORITHM":
             self.logger.error(
-                "algorithm as third attribute is missing in %s" % (file_))
+                "algorithm as third attribute is missing in %s" % (fn))
             sys.exit(3)
 
         i = 0
         for performance_measure in self.performance_measure:
             if arff_dict["attributes"][3 + i][0].upper() != performance_measure.upper():
                 self.logger.error(
-                    "\"%s\" as attribute is missing in %s" % (performance_measure, file_))
+                    "\"%s\" as attribute is missing in %s" % (performance_measure, fn))
                 sys.exit(3)
             i += 1
 
         if arff_dict["attributes"][3 + i][0].upper() != "RUNSTATUS":
             self.logger.error(
-                "runstatus as last attribute is missing in %s" % (file_))
+                "runstatus as last attribute is missing in %s" % (fn))
             sys.exit(3)
 
         algo_inst_col = ['instance_id', 'repetition', 'algorithm']
@@ -387,7 +387,7 @@ class ASlibScenario(object):
 
         self.instances = list(self.performance_data.index)
 
-    def read_feature_values(self, file_):
+    def read_feature_values(self, fn):
         '''
             reads feature file
             and saves them in self.instances
@@ -402,23 +402,23 @@ class ASlibScenario(object):
             @ATTRIBUTE first_local_min_steps NUMERIC
         '''
 
-        self.logger.info("Read %s" % (file_))
+        self.logger.info("Read %s" % (fn))
 
-        with open(file_, "r") as fp:
+        with open(fn, "r") as fp:
             try:
                 arff_dict = arff.load(fp)
             except arff.BadNominalValue:
                 self.logger.error(
-                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (file_))
+                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (fn))
                 sys.exit(3)
 
         if arff_dict["attributes"][0][0].upper() != "INSTANCE_ID":
             self.logger.error(
-                "instance_id as first attribute is missing in %s" % (file_))
+                "instance_id as first attribute is missing in %s" % (fn))
             sys.exit(3)
         if arff_dict["attributes"][1][0].upper() != "REPETITION":
             self.logger.error(
-                "repetition as second attribute is missing in %s" % (file_))
+                "repetition as second attribute is missing in %s" % (fn))
             sys.exit(3)
 
         feature_set = set(self.features_deterministic).union(
@@ -457,7 +457,7 @@ class ASlibScenario(object):
 
             if (inst_name, repetition) in pairs_inst_rep:
                 self.logger.warning(
-                    "Pair (%s,%s) is not unique in %s" % (inst_name, repetition, file_))
+                    "Pair (%s,%s) is not unique in %s" % (inst_name, repetition, fn))
             else:
                 pairs_inst_rep.append((inst_name, repetition))
 
@@ -467,7 +467,7 @@ class ASlibScenario(object):
         self.feature_data = pd.DataFrame(
             data[:, 2:], index=data[:, 0], columns=cols, dtype=np.float)
 
-    def read_feature_costs(self, file_):
+    def read_feature_costs(self, fn):
         '''
             reads feature time file
             and saves in self.instances
@@ -481,30 +481,30 @@ class ASlibScenario(object):
             @ATTRIBUTE local_search_probing NUMERIC
 
         '''
-        self.logger.info("Read %s" % (file_))
+        self.logger.info("Read %s" % (fn))
 
-        with open(file_, "r") as fp:
+        with open(fn, "r") as fp:
             try:
                 arff_dict = arff.load(fp)
             except arff.BadNominalValue:
                 self.logger.error(
-                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (file_))
+                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (fn))
                 sys.exit(3)
 
         if arff_dict["attributes"][0][0].upper() != "INSTANCE_ID":
             self.logger.error(
-                "\"instance_id\" as first attribute is missing in %s" % (file_))
+                "\"instance_id\" as first attribute is missing in %s" % (fn))
             sys.exit(3)
         if arff_dict["attributes"][1][0].upper() != "REPETITION":
             self.logger.error(
-                "\"repetition\" as second attribute is missing in %s" % (file_))
+                "\"repetition\" as second attribute is missing in %s" % (fn))
             sys.exit(3)
         found_groups = list(
             map(str, sorted(map(lambda x: x[0], arff_dict["attributes"][2:]))))
         for meta_group in self.feature_group_dict.keys():
             if meta_group not in found_groups:
                 self.logger.error(
-                    "\"%s\" as attribute is missing in %s" % (meta_group, file_))
+                    "\"%s\" as attribute is missing in %s" % (meta_group, fn))
                 sys.exit(3)
 
         inst_cost = {}
@@ -517,7 +517,7 @@ class ASlibScenario(object):
 
         self.feature_cost_data[pd.isnull(self.feature_cost_data)] = 0
 
-    def read_feature_runstatus(self, file_):
+    def read_feature_runstatus(self, fn):
         '''
             reads run stati of all pairs instance x feature step
             and saves them self.instances
@@ -529,23 +529,23 @@ class ASlibScenario(object):
             @ATTRIBUTE preprocessing { ok , timeout , memout , presolved , crash , other }
             @ATTRIBUTE local_search_probing { ok , timeout , memout , presolved , crash , other }
         '''
-        self.logger.info("Read %s" % (file_))
+        self.logger.info("Read %s" % (fn))
 
-        with open(file_, "r") as fp:
+        with open(fn, "r") as fp:
             try:
                 arff_dict = arff.load(fp)
             except arff.BadNominalValue:
                 self.logger.error(
-                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (file_))
+                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (fn))
                 sys.exit(3)
 
         if arff_dict["attributes"][0][0].upper() != "INSTANCE_ID":
             self.logger.error(
-                "instance_id as first attribute is missing in %s" % (file_))
+                "instance_id as first attribute is missing in %s" % (fn))
             sys.exit(3)
         if arff_dict["attributes"][1][0].upper() != "REPETITION":
             self.logger.error(
-                "repetition as second attribute is missing in %s" % (file_))
+                "repetition as second attribute is missing in %s" % (fn))
             sys.exit(3)
 
         for f_name in arff_dict["attributes"][2:]:
@@ -566,7 +566,7 @@ class ASlibScenario(object):
         self.feature_runstatus_data = pd.DataFrame(
             data[:, 2:], index=data[:, 0], columns=cols)
 
-    def read_ground_truth(self, file_):
+    def read_ground_truth(self, fn):
         '''
             read ground truths of all instances
             and save them in self.instances
@@ -578,19 +578,19 @@ class ASlibScenario(object):
             @ATTRIBUTE OPTIMAL_VALUE NUMERIC
         '''
 
-        self.logger.info("Read %s" % (file_))
+        self.logger.info("Read %s" % (fn))
 
-        with open(file_, "r") as fp:
+        with open(fn, "r") as fp:
             try:
                 arff_dict = arff.load(fp)
             except arff.BadNominalValue:
                 self.logger.error(
-                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (file_))
+                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (fn))
                 sys.exit(3)
 
         if arff_dict["attributes"][0][0].upper() != "INSTANCE_ID":
             self.logger.error(
-                "instance_id as first attribute is missing in %s" % (file_))
+                "instance_id as first attribute is missing in %s" % (fn))
             sys.exit(3)
 
         # extract feature names
@@ -603,36 +603,36 @@ class ASlibScenario(object):
         self.ground_truth_data = pd.DataFrame(
             data=data[:, 1:], index=data[:, 0].tolist(), columns=cols)
 
-    def read_cv(self, file_):
+    def read_cv(self, fn):
         '''
-            read cross validation <file_>
+            read cross validation <fn>
 
             @RELATION CV_2013 - SAT - Competition
             @ATTRIBUTE instance_id STRING
             @ATTRIBUTE repetition NUMERIC
             @ATTRIBUTE fold NUMERIC
         '''
-        self.logger.info("Read %s" % (file_))
+        self.logger.info("Read %s" % (fn))
 
-        with open(file_, "r") as fp:
+        with open(fn, "r") as fp:
             try:
                 arff_dict = arff.load(fp)
             except arff.BadNominalValue:
                 self.logger.error(
-                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (file_))
+                    "Parsing of arff file failed (%s) - maybe conflict of header and data." % (fn))
                 sys.exit(3)
 
         if arff_dict["attributes"][0][0].upper() != "INSTANCE_ID":
             self.logger.error(
-                "instance_id as first attribute is missing in %s" % (file_))
+                "instance_id as first attribute is missing in %s" % (fn))
             sys.exit(3)
         if arff_dict["attributes"][1][0].upper() != "REPETITION":
             self.logger.error(
-                "repetition as second attribute is missing in %s" % (file_))
+                "repetition as second attribute is missing in %s" % (fn))
             sys.exit(3)
         if arff_dict["attributes"][2][0].upper() != "FOLD":
             self.logger.error(
-                "fold as third attribute is missing in %s" % (file_))
+                "fold as third attribute is missing in %s" % (fn))
             sys.exit(3)
 
         # convert to pandas
