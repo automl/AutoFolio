@@ -197,7 +197,7 @@ class ASlibScenario(object):
         for expected_file in optional:
             full_path = os.path.join(self.dir_, expected_file)
             if not os.path.isfile(full_path):
-                self.logger.warn("Optional file not found: %s" % (full_path))
+                self.logger.warning("Optional file not found: %s" % (full_path))
             else:
                 self.found_files.append(full_path)
 
@@ -270,45 +270,45 @@ class ASlibScenario(object):
         self.algorithms = list(map(str,self.algorithms)) # if algorithms as numerical IDs, yaml interprets them as integers and not as string
 
         if not self.scenario:
-            self.logger.warn("Have not found SCENARIO_ID")
+            self.logger.warning("Have not found SCENARIO_ID")
         if not self.performance_measure:
-            self.logger.warn("Have not found PERFORMANCE_MEASURE")
+            self.logger.warning("Have not found PERFORMANCE_MEASURE")
         if not self.performance_type:
-            self.logger.warn("Have not found PERFORMANCE_TYPE")
+            self.logger.warning("Have not found PERFORMANCE_TYPE")
         if not self.maximize:
-            self.logger.warn("Have not found MAXIMIZE")
+            self.logger.warning("Have not found MAXIMIZE")
         if not self.algorithm_cutoff_time:
             self.logger.error("Have not found algorithm_cutoff_time")
             sys.exit(2)
         if not self.algorithm_cutoff_memory:
-            self.logger.warn("Have not found algorithm_cutoff_memory")
+            self.logger.warning("Have not found algorithm_cutoff_memory")
         if not self.features_cutoff_time:
-            self.logger.warn("Have not found features_cutoff_time")
-            self.logger.warn(
+            self.logger.warning("Have not found features_cutoff_time")
+            self.logger.warning(
                 "Assumption FEATURES_CUTOFF_TIME == ALGORITHM_CUTOFF_TIME ")
             self.features_cutoff_time = self.algorithm_cutoff_time
         if not self.features_cutoff_memory:
-            self.logger.warn("Have not found features_cutoff_memory")
+            self.logger.warning("Have not found features_cutoff_memory")
         if not self.features_deterministic:
-            self.logger.warn("Have not found features_deterministic")
+            self.logger.warning("Have not found features_deterministic")
         if not self.features_stochastic:
-            self.logger.warn("Have not found features_stochastic")
+            self.logger.warning("Have not found features_stochastic")
         if not self.algortihms_deterministics:
-            self.logger.warn("Have not found algortihms_deterministics")
+            self.logger.warning("Have not found algortihms_deterministics")
         if not self.algorithms_stochastic:
-            self.logger.warn("Have not found algorithms_stochastic")
+            self.logger.warning("Have not found algorithms_stochastic")
         if not self.feature_group_dict:
-            self.logger.warn("Have not found any feature step")
+            self.logger.warning("Have not found any feature step")
 
         feature_intersec = set(self.features_deterministic).intersection(
             self.features_stochastic)
         if feature_intersec:
-            self.logger.warn("Intersection of deterministic and stochastic features is not empty: %s" % (
+            self.logger.warning("Intersection of deterministic and stochastic features is not empty: %s" % (
                 str(feature_intersec)))
         algo_intersec = set(self.algortihms_deterministics).intersection(
             self.algorithms_stochastic)
         if algo_intersec:
-            self.logger.warn(
+            self.logger.warning(
                 "Intersection of deterministic and stochastic algorithms is not empty: %s" % (str(algo_intersec)))
 
     def read_algorithm_runs(self, fn):
@@ -450,13 +450,13 @@ class ASlibScenario(object):
 
             # not only Nones in feature vector and previously seen
             if functools.reduce(lambda x, y: True if (x or y) else False, features, False) and features in encoutered_features:
-                self.logger.warn(
+                self.logger.warning(
                     "Feature vector found twice: %s" % (",".join(map(str, features))))
             else:
                 encoutered_features.append(features)
 
             if (inst_name, repetition) in pairs_inst_rep:
-                self.logger.warn(
+                self.logger.warning(
                     "Pair (%s,%s) is not unique in %s" % (inst_name, repetition, file_))
             else:
                 pairs_inst_rep.append((inst_name, repetition))
@@ -701,7 +701,7 @@ class ASlibScenario(object):
         '''
 
         if self.cv_data is None:
-            self.logger.warn(
+            self.logger.warning(
                 "The ASlib scenario has not provided any cv.arff; create CV split...")
             self.create_cv_splits()
 
