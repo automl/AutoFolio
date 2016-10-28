@@ -384,6 +384,10 @@ class ASlibScenario(object):
             perf_data.drop(perf, axis=1, inplace=True)
 
         self.performance_data = self.performance_data_all[0]
+        
+        if self.performance_data.isnull().sum().sum() > 0:
+            self.logger.error("Performance data has missing values")
+            sys.exit(3)
 
         self.instances = list(self.performance_data.index)
 
