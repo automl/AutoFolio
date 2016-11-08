@@ -104,7 +104,6 @@ class PairwiseClassifier(object):
         #   sorted(list(zip(scenario.algorithms, scores)), key=lambda x: x[1], reverse=True))
         algo_indx = np.argmax(scores, axis=1)
         
-        print(cutoff)
         schedules = dict((str(inst),[s]) for s,inst in zip([(scenario.algorithms[i], cutoff+1) for i in algo_indx], scenario.feature_data.index))
         #self.logger.debug(schedules)
         return schedules
