@@ -14,7 +14,7 @@ from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
     UniformFloatHyperparameter, UniformIntegerHyperparameter
 
 # SMAC3
-from smac.tae.execute_func import ExecuteTAFunc
+from smac.tae.execute_func import ExecuteTAFuncDict
 from smac.scenario.scenario import Scenario
 from smac.smbo.smbo import SMBO
 from smac.stats.stats import Stats as AC_Stats
@@ -222,7 +222,7 @@ class AutoFolio(object):
                 best incumbent configuration found by SMAC
         '''
 
-        taf = ExecuteTAFunc(functools.partial(self.run_cv, scenario=scenario))
+        taf = ExecuteTAFuncDict(functools.partial(self.run_cv, scenario=scenario))
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
                                 # at most 10 function evaluations

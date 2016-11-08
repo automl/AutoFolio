@@ -120,8 +120,8 @@ class ASlibScenario(object):
 
         self.algorithms = list(
             self.performance_data.columns)  # list of strings
-        self.algortihms_deterministics = self.algorithms  # list of strings
-        self.algorithms_stochastic = []  # list of strings
+        #self.algortihms_deterministics = self.algorithms  # list of strings
+        #self.algorithms_stochastic = []  # list of strings
 
         self.features_deterministic = list(
             self.feature_data.columns)  # list of strings
@@ -238,7 +238,7 @@ class ASlibScenario(object):
             [performance_type]
 
         self.algorithm_cutoff_time = description.get('algorithm_cutoff_time')
-        self.features_cutoff_memory = description.get(
+        self.algorithm_cutoff_memory = description.get(
             'algorithm_cutoff_memory')
         self.features_cutoff_time = description.get('features_cutoff_time')
         self.features_cutoff_memory = description.get('features_cutoff_memory')
@@ -248,13 +248,6 @@ class ASlibScenario(object):
         self.features_stochastic = description.get('features_stochastic')
         if self.features_stochastic is None:
             self.features_stochastic = set()
-        self.algortihms_deterministics = description.get(
-            'algorithms_deterministic')
-        if self.algortihms_deterministics is None:
-            self.algortihms_deterministics = set()
-        self.algorithms_stochastic = description.get('algorithms_stochastic')
-        if self.algorithms_stochastic is None:
-            self.algorithms_stochastic = set()
         self.feature_group_dict = description.get('feature_steps')
         self.feature_steps = list(self.feature_group_dict.keys())
         self.feature_steps_default = description.get('default_steps')
@@ -263,42 +256,52 @@ class ASlibScenario(object):
             if d.get("requires") and not isinstance(d["requires"], list):
                 self.feature_group_dict[step]["requires"] = [d["requires"]]
 
-        self.algorithms = sorted(list(
-            set(self.algorithms_stochastic).union(
-                self.algortihms_deterministics)))
+        self.algorithms = list(description.get("metainfo_algorithms").keys())
+        #TODO: read whether an algorithm is deterministic or stochastic
 
         self.algorithms = list(map(str,self.algorithms)) # if algorithms as numerical IDs, yaml interprets them as integers and not as string
 
+        # ERRORS
+        error_found = False
         if not self.scenario:
             self.logger.warning("Have not found SCENARIO_ID")
-        if not self.performance_measure:
-            self.logger.warning("Have not found PERFORMANCE_MEASURE")
-        if not self.performance_type:
-            self.logger.warning("Have not found PERFORMANCE_TYPE")
-        if not self.maximize:
-            self.logger.warning("Have not found MAXIMIZE")
-        if not self.algorithm_cutoff_time:
+        if not self.performance_measure or self.performance_measure == "?":
+            self.logger.error("Have not found PERFORMANCE_MEASURE")
+            error_found = True
+        if not self.performance_type or self.performance_type == "?":
+            self.logger.error("Have not found PERFORMANCE_TYPE")
+            error_found = True
+        if not self.maximize or self.maximize == "?":
+            self.logger.error("Have not found MAXIMIZE")
+            error_found = True
+        if (not self.algorithm_cutoff_time or self.algorithm_cutoff_time == "?") and (self.performance_type == "quality"):
             self.logger.error("Have not found algorithm_cutoff_time")
-            sys.exit(2)
-        if not self.algorithm_cutoff_memory:
+            error_found = True
+        if not self.feature_group_dict:
+            self.logger.error("Have not found any feature step")
+            error_found = True
+            
+        if error_found:
+            sys.exit(3)
+            
+        # WARNINGS
+        if not self.algorithm_cutoff_memory or self.algorithm_cutoff_memory == "?":
             self.logger.warning("Have not found algorithm_cutoff_memory")
-        if not self.features_cutoff_time:
+            self.algorithm_cutoff_memory = None
+        if not self.features_cutoff_time or self.features_cutoff_time == "?":
             self.logger.warning("Have not found features_cutoff_time")
-            self.logger.warning(
+            self.logger.debug(
                 "Assumption FEATURES_CUTOFF_TIME == ALGORITHM_CUTOFF_TIME ")
             self.features_cutoff_time = self.algorithm_cutoff_time
-        if not self.features_cutoff_memory:
+        if not self.features_cutoff_memory or self.features_cutoff_memory == "?":
             self.logger.warning("Have not found features_cutoff_memory")
+            self.features_cutoff_memory = None
         if not self.features_deterministic:
             self.logger.warning("Have not found features_deterministic")
+            self.features_deterministic = []
         if not self.features_stochastic:
             self.logger.warning("Have not found features_stochastic")
-        if not self.algortihms_deterministics:
-            self.logger.warning("Have not found algortihms_deterministics")
-        if not self.algorithms_stochastic:
-            self.logger.warning("Have not found algorithms_stochastic")
-        if not self.feature_group_dict:
-            self.logger.warning("Have not found any feature step")
+            self.features_stochastic = []
 
         feature_intersec = set(self.features_deterministic).intersection(
             self.features_stochastic)
@@ -310,6 +313,10 @@ class ASlibScenario(object):
         if algo_intersec:
             self.logger.warning(
                 "Intersection of deterministic and stochastic algorithms is not empty: %s" % (str(algo_intersec)))
+        
+        if self.performance_type[0] == "solution_quality":
+            self.algorithm_cutoff_time  = 1 # pseudo number for schedules
+            self.logger.debug("Since we optimize quality, we use runtime cutoff of 1.")
 
     def read_algorithm_runs(self, fn):
         '''
