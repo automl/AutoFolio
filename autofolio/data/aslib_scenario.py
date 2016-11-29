@@ -5,6 +5,7 @@ import yaml
 import functools
 import arff  # liac-arff
 import copy
+import collections
 
 from sklearn.cross_validation import KFold
 import pandas as pd
@@ -120,8 +121,8 @@ class ASlibScenario(object):
 
         self.algorithms = list(
             self.performance_data.columns)  # list of strings
-        #self.algortihms_deterministics = self.algorithms  # list of strings
-        #self.algorithms_stochastic = []  # list of strings
+        # self.algortihms_deterministics = self.algorithms  # list of strings
+        # self.algorithms_stochastic = []  # list of strings
 
         self.features_deterministic = list(
             self.feature_data.columns)  # list of strings
@@ -197,7 +198,8 @@ class ASlibScenario(object):
         for expected_file in optional:
             full_path = os.path.join(self.dir_, expected_file)
             if not os.path.isfile(full_path):
-                self.logger.warning("Optional file not found: %s" % (full_path))
+                self.logger.warning(
+                    "Optional file not found: %s" % (full_path))
             else:
                 self.found_files.append(full_path)
 
@@ -231,7 +233,8 @@ class ASlibScenario(object):
         self.maximize = maximize if isinstance(maximize, list) else [maximize]
         for maxi in self.maximize:
             if not isinstance(maxi, bool):
-                raise ValueError("\"maximize\" in description.txt has to be a bool (i.e., not a string).")
+                raise ValueError(
+                    "\"maximize\" in description.txt has to be a bool (i.e., not a string).")
 
         performance_type = description.get('performance_type')
         self.performance_type  = performance_type if isinstance(performance_type, list) else \
@@ -257,9 +260,11 @@ class ASlibScenario(object):
                 self.feature_group_dict[step]["requires"] = [d["requires"]]
 
         self.algorithms = list(description.get("metainfo_algorithms").keys())
-        #TODO: read whether an algorithm is deterministic or stochastic
+        # TODO: read whether an algorithm is deterministic or stochastic
 
-        self.algorithms = list(map(str,self.algorithms)) # if algorithms as numerical IDs, yaml interprets them as integers and not as string
+        # if algorithms as numerical IDs, yaml interprets them as integers and
+        # not as string
+        self.algorithms = list(map(str, self.algorithms))
 
         # ERRORS
         error_found = False
@@ -280,10 +285,10 @@ class ASlibScenario(object):
         if not self.feature_group_dict:
             self.logger.error("Have not found any feature step")
             error_found = True
-            
+
         if error_found:
             sys.exit(3)
-            
+
         # WARNINGS
         if not self.algorithm_cutoff_memory or self.algorithm_cutoff_memory == "?":
             self.logger.warning("Have not found algorithm_cutoff_memory")
@@ -313,10 +318,11 @@ class ASlibScenario(object):
         if algo_intersec:
             self.logger.warning(
                 "Intersection of deterministic and stochastic algorithms is not empty: %s" % (str(algo_intersec)))
-        
+
         if self.performance_type[0] == "solution_quality":
-            self.algorithm_cutoff_time  = 1 # pseudo number for schedules
-            self.logger.debug("Since we optimize quality, we use runtime cutoff of 1.")
+            self.algorithm_cutoff_time = 1  # pseudo number for schedules
+            self.logger.debug(
+                "Since we optimize quality, we use runtime cutoff of 1.")
 
     def read_algorithm_runs(self, fn):
         '''
@@ -378,20 +384,23 @@ class ASlibScenario(object):
         status_col = ['runstatus']
 
         perf_data = pd.DataFrame(arff_dict['data'],
-                                 columns=algo_inst_col+perf_col+status_col)
-        perf_data.drop('repetition', axis=1, inplace=True)
+                                 columns=algo_inst_col + perf_col + status_col)
 
-        self.runstatus_data = \
-            perf_data.pivot('instance_id', 'algorithm', 'runstatus')
-        perf_data.drop('runstatus', axis=1, inplace=True)
-
+        # group performance data by mean value across repetitions
         for perf in self.performance_measure:
             self.performance_data_all.append(
-                perf_data.pivot('instance_id', 'algorithm', perf))
-            perf_data.drop(perf, axis=1, inplace=True)
+                perf_data.groupby(['instance_id', 'algorithm']).mean().unstack(
+                    'algorithm')[perf]
+            )
 
         self.performance_data = self.performance_data_all[0]
-        
+
+        # group runstatus by most frequent runstatus across repetitions
+        self.runstatus_data = \
+            perf_data.groupby(['instance_id', 'algorithm'])["runstatus"].aggregate(
+                lambda x: collections.Counter(x).most_common(1)[0][0]
+            ).unstack('algorithm')
+
         if self.performance_data.isnull().sum().sum() > 0:
             self.logger.error("Performance data has missing values")
             sys.exit(3)
@@ -459,12 +468,14 @@ class ASlibScenario(object):
             # TODO: handle feature repetitions
             inst_feats[inst_name] = features
 
-            # not only Nones in feature vector and previously seen
-            if functools.reduce(lambda x, y: True if (x or y) else False, features, False) and features in encoutered_features:
-                self.logger.warning(
-                    "Feature vector found twice: %s" % (",".join(map(str, features))))
-            else:
-                encoutered_features.append(features)
+            #===================================================================
+            # # not only Nones in feature vector and previously seen
+            # if functools.reduce(lambda x, y: True if (x or y) else False, features, False) and features in encoutered_features:
+            #     self.logger.warning(
+            #         "Feature vector found twice: %s" % (",".join(map(str, features))))
+            # else:
+            #     encoutered_features.append(features)
+            #===================================================================
 
             if (inst_name, repetition) in pairs_inst_rep:
                 self.logger.warning(
@@ -473,10 +484,15 @@ class ASlibScenario(object):
                 pairs_inst_rep.append((inst_name, repetition))
 
         # convert to pandas
-        data = np.array(arff_dict["data"])
-        cols = list(map(lambda x: x[0], arff_dict["attributes"][2:]))
-        self.feature_data = pd.DataFrame(
-            data[:, 2:], index=data[:, 0], columns=cols, dtype=np.float)
+        cols = list(map(lambda x: x[0], arff_dict["attributes"]))
+        self.feature_data = pd.DataFrame(arff_dict["data"], columns=cols)
+
+        self.feature_data = self.feature_data.groupby(['instance_id']).aggregate(np.mean)
+        self.feature_data = self.feature_data.drop("repetition", axis=1)
+        
+        duplicates = self.feature_data.duplicated().sum()
+        if duplicates > 0:
+            self.logger.warn("Found %d duplicated feature vectors" %(duplicates))
 
     def read_feature_costs(self, fn):
         '''
@@ -520,14 +536,27 @@ class ASlibScenario(object):
 
         inst_cost = {}
 
+        # impute missing values with 0
         # convert to pandas
         data = np.array(arff_dict["data"])
-        cols = list(map(lambda x: x[0], arff_dict["attributes"][2:]))
-        self.feature_cost_data = pd.DataFrame(
-            data[:, 2:], index=data[:, 0], columns=cols, dtype=np.float)
+        cols = list(map(lambda x: x[0], arff_dict["attributes"][1:]))
+        imputed_feature_cost_data = pd.DataFrame(
+            data[:,1:], columns=cols, dtype=np.float)
+        
+        # imputation has to be before the grouping
+        imputed_feature_cost_data[pd.isnull(imputed_feature_cost_data)] = 0
+        
+        # instance panda
+        cols = list(map(lambda x: x[0], arff_dict["attributes"][:1]))
+        instance_data = pd.DataFrame(
+            data[:,:1], columns=cols)
+        
+        self.feature_cost_data = pd.concat([instance_data, imputed_feature_cost_data], axis=1)
 
-        self.feature_cost_data[pd.isnull(self.feature_cost_data)] = 0
-
+        self.feature_cost_data = self.feature_cost_data.groupby(
+            ['instance_id']).mean()
+        self.feature_cost_data = self.feature_cost_data.drop("repetition", axis=1)
+        
     def read_feature_runstatus(self, fn):
         '''
             reads run stati of all pairs instance x feature step
@@ -572,10 +601,13 @@ class ASlibScenario(object):
             sys.exit(3)
 
         # convert to pandas
-        data = np.array(arff_dict["data"])
-        cols = list(map(lambda x: x[0], arff_dict["attributes"][2:]))
-        self.feature_runstatus_data = pd.DataFrame(
-            data[:, 2:], index=data[:, 0], columns=cols)
+        cols = list(map(lambda x: x[0], arff_dict["attributes"]))
+        self.feature_runstatus_data = pd.DataFrame(arff_dict["data"], columns=cols)
+
+        self.feature_runstatus_data = self.feature_runstatus_data.groupby(\
+            ['instance_id']).aggregate(lambda x: collections.Counter(x).most_common(1)[0][0])
+            
+        self.feature_runstatus_data = self.feature_runstatus_data.drop("repetition", axis=1)
 
     def read_ground_truth(self, fn):
         '''
@@ -617,6 +649,7 @@ class ASlibScenario(object):
     def read_cv(self, fn):
         '''
             read cross validation <fn>
+            only save first cv repetition!
 
             @RELATION CV_2013 - SAT - Competition
             @ATTRIBUTE instance_id STRING
@@ -648,9 +681,12 @@ class ASlibScenario(object):
 
         # convert to pandas
         data = np.array(arff_dict["data"])
-        cols = list(map(lambda x: x[0], arff_dict["attributes"][2:]))
+        cols = list(map(lambda x: x[0], arff_dict["attributes"][1:]))
         self.cv_data = pd.DataFrame(
-            data[:, 2:], index=data[:, 0], columns=cols, dtype=np.float)
+            data[:, 1:], index=data[:, 0], columns=cols, dtype=np.float)
+        # use only first cv repetitions
+        self.cv_data = self.cv_data[self.cv_data["repetition"] == 1]
+        self.cv_data = self.cv_data.drop("repetition", axis=1)
 
     def check_data(self):
         '''
@@ -663,22 +699,22 @@ class ASlibScenario(object):
             if perf_type == "runtime" and self.maximize[perf_type_i]:
                 self.logger.error("Maximizing runtime is not supported")
                 sys.exit(3)
-    
+
             if perf_type == "runtime":
                 # replace all non-ok scores with par10 values
                 self.logger.debug(
                     "Replace all runtime data with PAR10 values for non-OK runs")
                 self.performance_data_all[perf_type_i][
                     self.runstatus_data != "ok"] = self.algorithm_cutoff_time * 10
-    
+
             if perf_type == "solution_quality" and self.maximize[perf_type_i]:
                 self.logger.info(
                     "Multiply all performance data by -1, since autofolio minimizes the scores but the objective is to maximize")
                 self.performance_data_all[perf_type_i] *= -1
-    
+
         all_data = [self.feature_data, self.feature_cost_data,
-                        self.feature_runstatus_data, self.ground_truth_data,
-                        self.cv_data]
+                    self.feature_runstatus_data, self.ground_truth_data,
+                    self.cv_data]
 
         for perf_data in self.performance_data_all:
             all_data.append(perf_data)
@@ -693,6 +729,7 @@ class ASlibScenario(object):
 
             # each instance should be listed only once
             if data is not None and len(list(set(data.index))) != len(data.index):
+                self.logger.error(all_data)
                 self.logger.error("Some instances are listed more than once")
                 sys.exit(3)
 
@@ -782,13 +819,13 @@ class ASlibScenario(object):
         for indx, (train, test) in enumerate(kf):
             # print(self.cv_data.loc(np.array(self.instances[test]).tolist()))
             self.cv_data.iloc[test] = indx + 1.
-            
-    def change_perf_measure(self, measure_idx:int = None, measure_name:str = None):
+
+    def change_perf_measure(self, measure_idx: int = None, measure_name: str = None):
         '''
             change self.performance_data to another performance measure. 
             Either measure_idx or measure_name needs to be specified --
             measure_name overwrites measure_idx
-            
+
             Arguments
             ---------
             measure_idx : int
@@ -798,9 +835,6 @@ class ASlibScenario(object):
         '''
         if measure_name:
             measure_idx = self.performance_measure.index(measure_name)
-        
+
         if measure_idx:
             self.performance_data = self.performance_data_all[measure_idx]
-        
-        
-
