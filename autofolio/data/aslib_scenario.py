@@ -389,7 +389,7 @@ class ASlibScenario(object):
         # group performance data by mean value across repetitions
         for perf in self.performance_measure:
             self.performance_data_all.append(
-                perf_data.groupby(['instance_id', 'algorithm']).mean().unstack(
+                perf_data.groupby(['instance_id', 'algorithm']).median().unstack(
                     'algorithm')[perf]
             )
 
