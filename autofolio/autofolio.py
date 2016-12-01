@@ -20,7 +20,7 @@ from smac.smbo.smbo import SMBO
 from smac.stats.stats import Stats as AC_Stats
 
 from autofolio.io.cmd import CMDParser
-from autofolio.data.aslib_scenario import ASlibScenario
+from aslib_scenario.aslib_scenario import ASlibScenario
 
 # feature preprocessing
 from autofolio.feature_preprocessing.pca import PCAWrapper
@@ -177,7 +177,7 @@ class AutoFolio(object):
 
             Arguments
             ---------
-            scenario: autofolio.data.aslib_scenario.ASlibScenario
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
                 aslib scenario at hand
         '''
 
@@ -255,7 +255,7 @@ class AutoFolio(object):
 
             Arguments
             ---------
-            scenario: autofolio.data.aslib_scenario.ASlibScenario
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
                 aslib scenario at hand
             config: Configuration
                 parameter configuration to use for preprocessing
@@ -309,7 +309,7 @@ class AutoFolio(object):
 
             Arguments
             ---------
-            scenario: autofolio.data.aslib_scenario.ASlibScenario
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
                 aslib scenario at hand
             config: Configuration
                 parameter configuration to use for preprocessing
@@ -383,7 +383,7 @@ class AutoFolio(object):
 
             Arguments
             ---------
-            scenario: autofolio.data.aslib_scenario.ASlibScenario
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
                 aslib scenario at hand
             config: Configuration
                 parameter configuration to use for preprocessing
@@ -414,7 +414,7 @@ class AutoFolio(object):
 
             Arguments
             ---------
-            scenario: autofolio.data.aslib_scenario.ASlibScenario
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
                 aslib scenario at hand
             config: Configuration
                 parameter configuration to use for preprocessing
@@ -436,7 +436,7 @@ class AutoFolio(object):
 
             Arguments
             ---------
-            scenario: autofolio.data.aslib_scenario.ASlibScenario
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
                 aslib scenario at hand
             config: Configuration
                 parameter configuration
@@ -460,7 +460,7 @@ class AutoFolio(object):
 
             Arguments
             ---------
-            scenario: autofolio.data.aslib_scenario.ASlibScenario
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
                 aslib scenario at hand
             config: Configuration
                 parameter configuration

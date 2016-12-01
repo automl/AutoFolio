@@ -6,3 +6,4 @@ pyyaml
 liac-arff
 pandas
 smac
+git+https://github.com/mlindauer/ASlibScenario
