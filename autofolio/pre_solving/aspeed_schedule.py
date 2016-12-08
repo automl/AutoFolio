@@ -105,7 +105,7 @@ class Aspeed(object):
             if X.shape[0] > self.data_threshold:
                 random_indx = np.random.choice(
                     range(X.shape[0]),
-                    size=min(X.shape[0], max(X.shape[0] * self.data_fraction, self.data_threshold)), 
+                    size=min(X.shape[0], max(int(X.shape[0] * self.data_fraction), self.data_threshold)), 
                     replace=True)
                 X = X[random_indx, :]
 
