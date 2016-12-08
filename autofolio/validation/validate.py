@@ -1,6 +1,6 @@
 import logging
 
-from autofolio.data.aslib_scenario import ASlibScenario
+from aslib_scenario.aslib_scenario import ASlibScenario
 
 __author__ = "Marius Lindauer"
 __license__ = "BSD"
