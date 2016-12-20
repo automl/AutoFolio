@@ -99,3 +99,14 @@ class PCAWrapper(object):
         self.fit(scenario, config)
         scenario = self.transform(scenario)
         return scenario
+    
+    def get_attributes(self):
+        '''
+            returns a list of tuples of (attribute,value) 
+            for all learned attributes
+            
+            Returns
+            -------
+            list of tuples of (attribute,value) 
+        '''
+        return [("Dimensions",str(self.pca.n_components))]

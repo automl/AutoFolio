@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 import numpy as np
 import pandas as pd
@@ -107,3 +108,46 @@ class PairwiseClassifier(object):
         schedules = dict((str(inst),[s]) for s,inst in zip([(scenario.algorithms[i], cutoff+1) for i in algo_indx], scenario.feature_data.index))
         #self.logger.debug(schedules)
         return schedules
+
+    def get_attributes(self):
+        '''
+            returns a list of tuples of (attribute,value) 
+            for all learned attributes
+            
+            Returns
+            -------
+            list of tuples of (attribute,value) 
+        '''
+        attr = [("Classifier",self.classifier_class.__name__),("Hyperparameters",[])]
+        trained_classifier = self.classifiers[0]
+        try:
+            attr[1][1].append("max_depth = %d" %(trained_classifier.model.max_depth))
+        except:
+            traceback.print_exc()
+            pass
+        try:
+            attr[1][1].append("min_samples_split = %d" %(trained_classifier.model.min_samples_split))
+        except:
+            traceback.print_exc()
+            pass
+        try:
+            attr[1][1].append("min_samples_leaf = %d" %(trained_classifier.model.min_samples_leaf))
+        except:
+            traceback.print_exc()
+            pass
+        try:
+            attr[1][1].append("criterion = %s" %(trained_classifier.model.criterion))
+        except:
+            traceback.print_exc()
+            pass
+        try:
+            attr[1][1].append("n_estimators = %d" %(trained_classifier.model.n_estimators))
+        except:
+            traceback.print_exc()
+            pass
+        try:
+            attr[1][1].append("max_features = %s" %(trained_classifier.model.max_features))
+        except:
+            traceback.print_exc()
+            pass
+        return attr

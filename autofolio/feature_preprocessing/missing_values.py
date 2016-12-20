@@ -90,3 +90,20 @@ class ImputerWrapper(object):
         self.fit(scenario, config)
         scenario = self.transform(scenario)
         return scenario
+    
+    def get_attributes(self):
+        '''
+            returns a list of tuples of (attribute,value) 
+            for all learned attributes
+            
+            Arguments
+            ---------
+            config: ConfigSpace.Configuration
+                configuration
+
+            
+            Returns
+            -------
+            list of tuples of (attribute,value) 
+        '''
+        return [("Strategy",self.imputer.strategy)]

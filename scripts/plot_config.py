@@ -12,6 +12,7 @@ if cmd_folder not in sys.path:
 import pickle
 import argparse
 from graphviz import Digraph
+import traceback
 
 def load_model(model_fn: str):
     '''
@@ -57,6 +58,7 @@ def visualize(feature_pre_pipeline, pre_solver, selector):
         dot.node('fpp_%d' %(idx), fpp.__class__.__name__)
         if idx > 0:
             dot.edge('fpp_%d' %(idx-1),'fpp_%d' %(idx))
+        add_attributes(obj=fpp, node_name='fpp_%d' %(idx), dot=dot)
             
     for idx,presolver in enumerate(pre_solver.schedule):
         dot.node('pre_%d' %(idx), "%s for %d sec" %(presolver[0], presolver[1]))
@@ -65,11 +67,47 @@ def visualize(feature_pre_pipeline, pre_solver, selector):
         elif feature_pre_pipeline:
             dot.edge('fpp_%d' %(len(feature_pre_pipeline)-1),'pre_%d' %(idx))
             
+    dot.node("selector", selector.__class__.__name__)
     if pre_solver:
-        dot.edge('pre_%d' %(len(pre_solver.schedule)-1), selector.__class__.__name__)
+        dot.edge('pre_%d' %(len(pre_solver.schedule)-1), "selector")
+    add_attributes(obj=selector, node_name="selector", dot=dot)
                    
         
     dot.render('test-output/autofolio', view=True)
+    
+def add_attributes(obj, node_name:str, dot:Digraph):
+    '''
+        add attributes of <obj> with <node_name> to <dot>
+        
+        Arguments
+        ---------
+        obj: Object
+            should implement get_attributes()
+        node_name: str
+            node name of obj in dot
+        dot: Digraph
+            digraph of graphviz
+    '''
+    
+    try:
+        attributes = obj.get_attributes()
+    except AttributeError:
+        #traceback.print_exc()
+        return
+    for name, attr in attributes:
+        if isinstance(attr, str):
+            dot.node(name, "%s:%s"%(name, attr))
+        elif isinstance(attr, list):
+            dot.node(name, "%s"%(name))
+            for s in attr:
+                dot.node(str(s), str(s))
+                dot.edge("%s"%(name), str(s))
+        else:
+            print("UNKNOWN TYPE: %s" %(attr))
+            
+        dot.edge(node_name,name)
+        
+    
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--load", type=str, default=None,

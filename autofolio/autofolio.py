@@ -359,7 +359,11 @@ class AutoFolio(object):
 
         dict_conf = config.get_dictionary()
         for param, value in pairwise(overwrite_args):
-            if dict_conf.get(param):
+            try:
+                ok = self.cs.get_hyperparameter(param)
+            except KeyError:
+                ok = None
+            if ok is not None:
                 if type(self.cs.get_hyperparameter(param)) is UniformIntegerHyperparameter:
                     dict_conf[param] = int(value)
                 elif type(self.cs.get_hyperparameter(param)) is UniformFloatHyperparameter:
