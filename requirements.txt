@@ -8,3 +8,4 @@ pandas
 smac
 git+https://github.com/mlindauer/ASlibScenario
 graphviz
+xgboost

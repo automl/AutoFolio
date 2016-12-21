@@ -25,6 +25,7 @@ class RandomForest(object):
         try:
             classifier = cs.get_hyperparameter("classifier")
             classifier.choices.append("RandomForest")
+            classifier._num_choices += 1
         except KeyError:
             classifier = CategoricalHyperparameter(
                 "classifier", choices=["RandomForest"], default="RandomForest")

@@ -33,6 +33,7 @@ from autofolio.pre_solving.aspeed_schedule import Aspeed
 
 # classifiers
 from autofolio.selector.classifiers.random_forest import RandomForest
+from autofolio.selector.classifiers.xgboost import XGBoost
 
 # selectors
 from autofolio.selector.pairwise_classification import PairwiseClassifier
@@ -201,9 +202,13 @@ class AutoFolio(object):
 
         # classifiers
         RandomForest.add_params(self.cs)
+        XGBoost.add_params(self.cs)
+       
 
         # selectors
         PairwiseClassifier.add_params(self.cs)
+
+        self.logger.debug(self.cs)
 
         return self.cs
 
@@ -226,7 +231,7 @@ class AutoFolio(object):
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
                                 # at most 10 function evaluations
-                                "runcount-limit": 10,
+                                "runcount-limit": 1000,
                                 "cs": self.cs,  # configuration space
                                 "deterministic": "true",
                                 "instances": [[i] for i in range(1,11)]
@@ -512,6 +517,8 @@ class AutoFolio(object):
             clf_class = None
             if config.get("classifier") == "RandomForest":
                 clf_class = RandomForest
+            if config.get("classifier") == "XGBoost":
+                clf_class = XGBoost
 
             selector = PairwiseClassifier(classifier_class=clf_class)
             selector.fit(scenario=scenario, config=config)
