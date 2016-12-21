@@ -58,7 +58,13 @@ def visualize(feature_pre_pipeline, pre_solver, selector):
         dot.node('fpp_%d' %(idx), fpp.__class__.__name__)
         if idx > 0:
             dot.edge('fpp_%d' %(idx-1),'fpp_%d' %(idx))
-        add_attributes(obj=fpp, node_name='fpp_%d' %(idx), dot=dot)
+        try:
+            attributes = fpp.get_attributes()
+            add_attributes(attributes=attributes, node_name='fpp_%d' %(idx), dot=dot)
+        except AttributeError:
+            #traceback.print_exc()
+            pass
+        
             
     for idx,presolver in enumerate(pre_solver.schedule):
         dot.node('pre_%d' %(idx), "%s for %d sec" %(presolver[0], presolver[1]))
@@ -70,42 +76,62 @@ def visualize(feature_pre_pipeline, pre_solver, selector):
     dot.node("selector", selector.__class__.__name__)
     if pre_solver:
         dot.edge('pre_%d' %(len(pre_solver.schedule)-1), "selector")
-    add_attributes(obj=selector, node_name="selector", dot=dot)
+    try:
+        attributes = selector.get_attributes()
+        add_attributes(attributes=attributes, node_name='selector', dot=dot)
+    except AttributeError:
+        traceback.print_exc()
+        pass
                    
         
     dot.render('test-output/autofolio', view=True)
     
-def add_attributes(obj, node_name:str, dot:Digraph):
+def add_attributes(attributes, node_name:str, dot:Digraph):
     '''
         add attributes of <obj> with <node_name> to <dot>
         
         Arguments
         ---------
-        obj: Object
-            should implement get_attributes()
+        attributes: str|list|dict
+            attributes
         node_name: str
             node name of obj in dot
         dot: Digraph
             digraph of graphviz
     '''
     
-    try:
-        attributes = obj.get_attributes()
-    except AttributeError:
-        #traceback.print_exc()
+
+    if isinstance(attributes,str):
+        print(attributes)
+        dot.node(attributes,attributes, shape='box', style='filled', color='lightgrey')
+        dot.edge(node_name,attributes)
         return
-    for name, attr in attributes:
-        if isinstance(attr, str):
-            dot.node(name, "%s:%s"%(name, attr))
-        elif isinstance(attr, list):
-            dot.node(name, "%s"%(name))
-            for s in attr:
-                dot.node(str(s), str(s))
-                dot.edge("%s"%(name), str(s))
-        else:
-            print("UNKNOWN TYPE: %s" %(attr))
-            
-        dot.edge(node_name,name)
+    elif isinstance(attributes,list):
+        for attr in attributes:
+            add_attributes(attributes=attr, node_name=node_name, dot=dot)
+    elif isinstance(attributes,dict):
+        for k, v in attributes.items():
+            dot.node(k,k, shape='box', style='filled', color='lightgrey')
+            dot.edge(node_name,k)
+            add_attributes(attributes=v, node_name=k, dot=dot)
+    else:
+        print("UNKNOWN TYPE: %s" %(attributes))
+    
+    
+    #===========================================================================
+    # for name, attr in attributes:
+    #     if isinstance(attr, str):
+    #         dot.node(name, "%s:%s"%(name, attr))
+    #     elif isinstance(attr, list):
+    #         dot.node(name, "%s"%(name))
+    #         for s in attr:
+    #             dot.node(str(s), str(s))
+    #             dot.edge("%s"%(name), str(s))
+    #     else:
+    #         print("UNKNOWN TYPE: %s" %(attr))
+    #         
+    #     dot.edge(node_name,name)
+    #===========================================================================
         
     
 

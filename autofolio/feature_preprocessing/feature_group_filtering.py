@@ -124,4 +124,4 @@ class FeatureGroupFiltering(object):
             -------
             list of tuples of (attribute,value) 
         '''
-        return [("Feature Groups",self.active_groups)]
+        return [{"Feature Groups":self.active_groups}]

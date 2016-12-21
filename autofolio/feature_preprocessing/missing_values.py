@@ -106,4 +106,4 @@ class ImputerWrapper(object):
             -------
             list of tuples of (attribute,value) 
         '''
-        return [("Strategy",self.imputer.strategy)]
+        return ["Strategy=%s" %(self.imputer.strategy)]

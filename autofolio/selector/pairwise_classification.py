@@ -118,36 +118,7 @@ class PairwiseClassifier(object):
             -------
             list of tuples of (attribute,value) 
         '''
-        attr = [("Classifier",self.classifier_class.__name__),("Hyperparameters",[])]
-        trained_classifier = self.classifiers[0]
-        try:
-            attr[1][1].append("max_depth = %d" %(trained_classifier.model.max_depth))
-        except:
-            traceback.print_exc()
-            pass
-        try:
-            attr[1][1].append("min_samples_split = %d" %(trained_classifier.model.min_samples_split))
-        except:
-            traceback.print_exc()
-            pass
-        try:
-            attr[1][1].append("min_samples_leaf = %d" %(trained_classifier.model.min_samples_leaf))
-        except:
-            traceback.print_exc()
-            pass
-        try:
-            attr[1][1].append("criterion = %s" %(trained_classifier.model.criterion))
-        except:
-            traceback.print_exc()
-            pass
-        try:
-            attr[1][1].append("n_estimators = %d" %(trained_classifier.model.n_estimators))
-        except:
-            traceback.print_exc()
-            pass
-        try:
-            attr[1][1].append("max_features = %s" %(trained_classifier.model.max_features))
-        except:
-            traceback.print_exc()
-            pass
+        class_attr = self.classifiers[0].get_attributes()
+        attr = [{self.classifier_class.__name__:class_attr}]
+
         return attr

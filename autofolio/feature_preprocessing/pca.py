@@ -109,4 +109,4 @@ class PCAWrapper(object):
             -------
             list of tuples of (attribute,value) 
         '''
-        return [("Dimensions",str(self.pca.n_components))]
+        return ["Dimensions=%s" %(self.pca.n_components)]
