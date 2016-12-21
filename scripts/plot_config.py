@@ -54,28 +54,33 @@ def visualize(feature_pre_pipeline, pre_solver, selector):
     '''
     
     dot = Digraph(comment='AutoFolio')
-    for idx,fpp in enumerate(feature_pre_pipeline):
-        dot.node('fpp_%d' %(idx), fpp.__class__.__name__)
-        if idx > 0:
-            dot.edge('fpp_%d' %(idx-1),'fpp_%d' %(idx))
+    fpp_idx = 0
+    for fpp in feature_pre_pipeline:
+        if not fpp.active:
+            continue
+        fpp_idx += 1
+        dot.node('fpp_%d' %(fpp_idx), fpp.__class__.__name__)
+        if fpp_idx > 0:
+            dot.edge('fpp_%d' %(fpp_idx-1),'fpp_%d' %(fpp_idx))
         try:
             attributes = fpp.get_attributes()
-            add_attributes(attributes=attributes, node_name='fpp_%d' %(idx), dot=dot)
+            add_attributes(attributes=attributes, node_name='fpp_%d' %(fpp_idx), dot=dot)
         except AttributeError:
             #traceback.print_exc()
             pass
-        
             
     for idx,presolver in enumerate(pre_solver.schedule):
         dot.node('pre_%d' %(idx), "%s for %d sec" %(presolver[0], presolver[1]))
         if idx > 0:
             dot.edge('pre_%d' %(idx-1),'pre_%d' %(idx))
         elif feature_pre_pipeline:
-            dot.edge('fpp_%d' %(len(feature_pre_pipeline)-1),'pre_%d' %(idx))
+            dot.edge('fpp_%d' %(fpp_idx),'pre_%d' %(idx))
             
     dot.node("selector", selector.__class__.__name__)
-    if pre_solver:
+    if pre_solver.schedule:
         dot.edge('pre_%d' %(len(pre_solver.schedule)-1), "selector")
+    elif feature_pre_pipeline:
+        dot.edge('fpp_%d' %(fpp_idx),'selector')
     try:
         attributes = selector.get_attributes()
         add_attributes(attributes=attributes, node_name='selector', dot=dot)

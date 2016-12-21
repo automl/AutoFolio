@@ -32,6 +32,7 @@ class ImputerWrapper(object):
             Constructor
         '''
         self.imputer = None
+        self.active = False
 
         self.logger = logging.getLogger("MissingValueImputation")
 
@@ -49,6 +50,7 @@ class ImputerWrapper(object):
 
         self.imputer = Imputer(strategy=config.get("imputer_strategy"))
         self.imputer.fit(scenario.feature_data.values)
+        self.active = True
 
     def transform(self, scenario: ASlibScenario):
         '''

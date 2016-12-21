@@ -39,6 +39,7 @@ class PCAWrapper(object):
             Constructor
         '''
         self.pca = None
+        self.active = False
 
         self.logger = logging.getLogger("PCA")
 
@@ -57,6 +58,7 @@ class PCAWrapper(object):
         if config.get("pca"):
             self.pca = PCA(n_components=config.get("pca_n_components"))
             self.pca.fit(scenario.feature_data.values)
+            self.active = True
 
     def transform(self, scenario: ASlibScenario):
         '''

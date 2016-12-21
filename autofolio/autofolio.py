@@ -226,7 +226,7 @@ class AutoFolio(object):
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
                                 # at most 10 function evaluations
-                                "runcount-limit": 100,
+                                "runcount-limit": 10,
                                 "cs": self.cs,  # configuration space
                                 "deterministic": "true",
                                 "instances": [[i] for i in range(1,11)]
