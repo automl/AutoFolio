@@ -16,8 +16,8 @@ from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
 # SMAC3
 from smac.tae.execute_func import ExecuteTAFuncDict
 from smac.scenario.scenario import Scenario
-from smac.smbo.smbo import SMBO
 from smac.stats.stats import Stats as AC_Stats
+from smac.facade.smac_facade import SMAC
 
 from autofolio.io.cmd import CMDParser
 from aslib_scenario.aslib_scenario import ASlibScenario
@@ -222,13 +222,14 @@ class AutoFolio(object):
                 best incumbent configuration found by SMAC
         '''
 
-        taf = ExecuteTAFuncDict(functools.partial(self.run_cv, scenario=scenario))
+        taf = ExecuteTAFuncDict(functools.partial(self.called_by_smac, scenario=scenario))
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
                                 # at most 10 function evaluations
-                                "runcount-limit": 10,
+                                "runcount-limit": 100,
                                 "cs": self.cs,  # configuration space
-                                "deterministic": "true"
+                                "deterministic": "true",
+                                "instances": [[i] for i in range(1,11)]
                                 })
 
         # necessary to use stats options related to scenario information
@@ -240,16 +241,15 @@ class AutoFolio(object):
         self.logger.info("Start Configuration")
         self.logger.info(
             ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        smbo = SMBO(scenario=ac_scenario, tae_runner=taf,
+        smac = SMAC(scenario=ac_scenario, tae_runner=taf,
                     rng=np.random.RandomState(42))
-        smbo.run(max_iters=999)
+        incumbent = smac.optimize()
 
-        AC_Stats.print_stats()
-        self.logger.info("Final Incumbent: %s" % (smbo.incumbent))
+        self.logger.info("Final Incumbent: %s" % (incumbent))
 
-        return smbo.incumbent
+        return incumbent
 
-    def run_cv(self, config: Configuration, scenario: ASlibScenario, folds=10):
+    def called_by_smac(self, config: Configuration, scenario: ASlibScenario, instance=None, seed:int=1):
         '''
             run a cross fold validation based on the given data from cv.arff
 
@@ -261,7 +261,45 @@ class AutoFolio(object):
                 parameter configuration to use for preprocessing
             folds: int
                 number of cv-splits
+            seed: int
+                random seed (not used)
+                
+            Returns
+            -------
+            float: average performance
         '''
+        
+        if instance is None:
+            return self.run_cv(config=config, scenario=scenario)
+        else:
+            try:
+                stats = self.run_fold(config=config, scenario=scenario, fold=instance)
+                perf = stats.show()
+            except ValueError:
+                if not scenario.maximize[0]:
+                    perf = scenario.algorithm_cutoff_time * 10
+                else:
+                    perf = scenario.algorithm_cutoff_time * -10
+                if scenario.maximize[0]:
+                    perf *= -1
+            return perf
+
+    def run_cv(self, config: Configuration, scenario: ASlibScenario, folds:int=10):
+        '''
+            run a cross fold validation based on the given data from cv.arff
+
+            Arguments
+            ---------
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
+                aslib scenario at hand
+            config: Configuration
+                parameter configuration to use for preprocessing
+            folds: int
+                number of cv-splits
+            seed: int
+                random seed (not used)
+        '''
+        #TODO: use seed and instance in an appropriate way
         try:
             if scenario.performance_type[0] == "runtime":
                 cv_stat = Stats(runtime_cutoff=scenario.algorithm_cutoff_time)
@@ -269,23 +307,9 @@ class AutoFolio(object):
                 cv_stat = Stats(runtime_cutoff=0)
             for i in range(1, folds + 1):
                 self.logger.info("CV-Iteration: %d" % (i))
-                test_scenario, training_scenario = scenario.get_split(indx=i)
-
-                feature_pre_pipeline, pre_solver, selector = self.fit(
-                    scenario=training_scenario, config=config)
-
-                schedules = self.predict(
-                    test_scenario, config, feature_pre_pipeline, pre_solver, selector)
-
-                val = Validator()
-                if scenario.performance_type[0] == "runtime":
-                    stats = val.validate_runtime(
-                        schedules=schedules, test_scenario=test_scenario)
-                elif scenario.performance_type[0] == "solution_quality":
-                    stats = val.validate_quality(
-                        schedules=schedules, test_scenario=test_scenario)
-                else:
-                    raise ValueError("Unknown performance_type[0]")
+                stats = self.run_fold(config=config,
+                                      scenario=scenario,
+                                      fold=i)
                 cv_stat.merge(stat=stats)
 
             self.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
@@ -293,15 +317,52 @@ class AutoFolio(object):
             par10 = cv_stat.show()
         except ValueError:
             traceback.print_exc()
-            if not scenario.maximize[0]:
-                par10 = scenario.algorithm_cutoff_time * 10
-            else:
-                par10 = scenario.algorithm_cutoff_time * -10
+            par10 = scenario.algorithm_cutoff_time * 10
 
         if scenario.maximize[0]:
             par10 *= -1
 
         return par10
+
+    def run_fold(self, config: Configuration, scenario:ASlibScenario, fold:int):
+        '''
+            run a given fold of cross validation
+            
+            Arguments
+            ---------
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
+                aslib scenario at hand
+            config: Configuration
+                parameter configuration to use for preprocessing
+            fold: int
+                fold id
+                
+            Returns
+            -------
+            Stats()
+                
+        '''
+        self.logger.info("CV-Iteration: %d" % (fold))
+        
+        test_scenario, training_scenario = scenario.get_split(indx=fold)
+
+        feature_pre_pipeline, pre_solver, selector = self.fit(
+            scenario=training_scenario, config=config)
+
+        schedules = self.predict(
+            test_scenario, config, feature_pre_pipeline, pre_solver, selector)
+
+        val = Validator()
+        if scenario.performance_type[0] == "runtime":
+            stats = val.validate_runtime(
+                schedules=schedules, test_scenario=test_scenario)
+        elif scenario.performance_type[0] == "solution_quality":
+            stats = val.validate_quality(
+                schedules=schedules, test_scenario=test_scenario)
+        else:
+            raise ValueError("Unknown performance_type[0]")
+        
+        return stats
 
     def fit(self, scenario: ASlibScenario, config: Configuration):
         '''

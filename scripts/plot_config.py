@@ -102,7 +102,6 @@ def add_attributes(attributes, node_name:str, dot:Digraph):
     
 
     if isinstance(attributes,str):
-        print(attributes)
         dot.node(attributes,attributes, shape='box', style='filled', color='lightgrey')
         dot.edge(node_name,attributes)
         return
