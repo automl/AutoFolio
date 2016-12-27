@@ -35,8 +35,12 @@ from autofolio.pre_solving.aspeed_schedule import Aspeed
 from autofolio.selector.classifiers.random_forest import RandomForest
 from autofolio.selector.classifiers.xgboost import XGBoost
 
+# regressors
+from autofolio.selector.regressors.random_forest import RandomForestRegressor
+
 # selectors
 from autofolio.selector.pairwise_classification import PairwiseClassifier
+from autofolio.selector.pairwise_regression import PairwiseRegression
 
 # validation
 from autofolio.validation.validate import Validator, Stats
@@ -204,9 +208,12 @@ class AutoFolio(object):
         RandomForest.add_params(self.cs)
         XGBoost.add_params(self.cs)
        
+        # regressors
+        RandomForestRegressor.add_params(self.cs)
 
         # selectors
         PairwiseClassifier.add_params(self.cs)
+        PairwiseRegression.add_params(self.cs)       
 
         self.logger.debug(self.cs)
 
@@ -521,6 +528,14 @@ class AutoFolio(object):
                 clf_class = XGBoost
 
             selector = PairwiseClassifier(classifier_class=clf_class)
+            selector.fit(scenario=scenario, config=config)
+
+        if config.get("selector") == "PairwiseRegressor":
+            reg_class = None
+            if config.get("regressor") == "RandomForestRegressor":
+                reg_class = RandomForestRegressor
+                
+            selector = PairwiseRegression(regressor_class=reg_class)
             selector.fit(scenario=scenario, config=config)
 
         return selector
