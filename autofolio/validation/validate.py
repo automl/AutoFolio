@@ -42,7 +42,7 @@ class Stats(object):
                 penalized average runtime 
         '''
 
-        if remove_unsolvable:
+        if remove_unsolvable and self.runtime_cutoff:
             rm_string = "removed"
             timeouts = self.timeouts - self.unsolvable
             par1 = self.par1 - (self.unsolvable * self.runtime_cutoff)

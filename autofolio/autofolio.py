@@ -97,6 +97,8 @@ class AutoFolio(object):
                                        objective=args_.objective,
                                        runtime_cutoff=args_.runtime_cutoff,
                                        maximize=args_.maximize)
+            else:
+                raise ValueError("Missing inputs to read scenario data.")
 
             self.cs = self.get_cs(scenario)
 
@@ -238,7 +240,7 @@ class AutoFolio(object):
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
                                 # at most 10 function evaluations
-                                "runcount-limit": 1000,
+                                "runcount-limit": 100,
                                 "cs": self.cs,  # configuration space
                                 "deterministic": "true",
                                 "instances": [[i] for i in range(1,11)]
@@ -450,7 +452,7 @@ class AutoFolio(object):
             else:
                 self.logger.warn(
                     "Unknown given parameter: %s %s" % (param, value))
-        config = Configuration(self.cs, values=dict_conf)
+        config = Configuration(self.cs, values=dict_conf, allow_inactive_with_values=True)
 
         return config
 
