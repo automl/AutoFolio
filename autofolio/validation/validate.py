@@ -24,6 +24,8 @@ class Stats(object):
         self.presolved_feats = 0
 
         self.runtime_cutoff = runtime_cutoff
+        
+        self.selection_freq = {}
 
         self.logger = logging.getLogger("Stats")
 
@@ -69,6 +71,11 @@ class Stats(object):
             self.logger.info("Average Solution Quality: %.4f" % (par1 / n_samples))
             par10 = par1
             
+            
+        self.logger.debug("Selection Frequency")
+        for algo, n in self.selection_freq.items():
+            self.logger.debug("%s: %.2f" %(algo, n/(timeouts + self.solved)))
+            
         return par10 / n_samples
 
     def merge(self, stat):
@@ -85,7 +92,9 @@ class Stats(object):
         self.solved += stat.solved
         self.unsolvable += stat.unsolvable
         self.presolved_feats += stat.presolved_feats
-
+        
+        for algo, n in stat.selection_freq.items():
+            self.selection_freq[algo]  = self.selection_freq.get(algo, 0) + n
 
 class Validator(object):
 
@@ -147,6 +156,7 @@ class Validator(object):
                 continue
 
             for algo, budget in schedule:
+                stat.selection_freq[algo]  = stat.selection_freq.get(algo, 0) + 1
                 time = test_scenario.performance_data[algo][inst]
                 used_time += min(time, budget)
                 if time <= budget and used_time <= test_scenario.algorithm_cutoff_time and test_scenario.runstatus_data[algo][inst] == "ok":
@@ -196,6 +206,7 @@ class Validator(object):
                 sys.exit(9)
                 
             selected_algo = schedule[0][0]
+            stat.selection_freq[selected_algo]  = stat.selection_freq.get(selected_algo, 0) + 1
             perf = test_scenario.performance_data[selected_algo][inst]
             
             self.logger.debug("Using %s on %s with performance %f" %(selected_algo, inst, perf))
