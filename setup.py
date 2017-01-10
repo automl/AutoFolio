@@ -2,11 +2,11 @@ import os
 import setuptools
 
 
-requirements = ['ConfigSpace', 'numpy', 'scipy', 'scikit-learn', 'pyyaml', 'liac-arff', 'pandas', 'smac']
+requirements = ['ConfigSpace', 'numpy', 'scipy', 'scikit-learn', 'pandas', 'smac', 'xgboost']
 
 setuptools.setup(
     name="autofolio",
-    version="1.0.0",
+    version="2.0.0",
     author="Marius Lindauer",
     author_email="lindauer@cs.uni-freiburg.de",
     description=("AutoFolio 2, an automaticalliy configured algorithm selector."),

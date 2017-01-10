@@ -28,6 +28,7 @@ class FeatureGroupFiltering(object):
         self.logger = logging.getLogger("FeatureGroupFiltering")
         self.active_features = []
         self.active_groups = []
+        self.active = False
 
     def fit(self, scenario, config):
         '''
@@ -40,6 +41,7 @@ class FeatureGroupFiltering(object):
             config: ConfigSpace.Configuration
                 configuration
         '''
+        self.active = True
         active_groups = []
         for param in config:
             if param.startswith("fgroup_") and config[param]:
@@ -114,3 +116,14 @@ class FeatureGroupFiltering(object):
         self.fit(scenario, config)
         scenario = self.transform(scenario)
         return scenario
+    
+    def get_attributes(self):
+        '''
+            returns a list of tuples of (attribute,value) 
+            for all learned attributes
+            
+            Returns
+            -------
+            list of tuples of (attribute,value) 
+        '''
+        return [{"Feature Groups":self.active_groups}]

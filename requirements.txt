@@ -2,8 +2,8 @@ ConfigSpace
 numpy
 scipy
 scikit-learn
-pyyaml
-liac-arff
 pandas
 smac
 git+https://github.com/mlindauer/ASlibScenario
+xgboost
+sphinx_bootstrap_theme

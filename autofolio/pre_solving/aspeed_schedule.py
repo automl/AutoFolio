@@ -38,7 +38,7 @@ class Aspeed(object):
             "presolving", choices=[True, False], default=True)
         cs.add_hyperparameter(pre_solving)
         pre_cutoff = UniformIntegerHyperparameter(
-            "pre:cutoff", lower=0, upper=cutoff, default=math.ceil(cutoff * 0.1))
+            "pre:cutoff", lower=1, upper=cutoff, default=math.ceil(cutoff * 0.1), log=True)
         cs.add_hyperparameter(pre_cutoff)
         cond = InCondition(child=pre_cutoff, parent=pre_solving, values=[True])
         cs.add_condition(cond)

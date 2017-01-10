@@ -33,7 +33,7 @@ class StandardScalerWrapper(object):
             Constructor
         '''
         self.scaler = None
-
+        self.active = False
         self.logger = logging.getLogger("StandardScaler")
 
     def fit(self, scenario: ASlibScenario, config: Configuration):
@@ -49,6 +49,7 @@ class StandardScalerWrapper(object):
         '''
 
         if config.get("StandardScaler"):
+            self.active = True
             self.scaler = StandardScaler()
             self.scaler.fit(scenario.feature_data.values)
 

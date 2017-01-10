@@ -32,6 +32,7 @@ class ImputerWrapper(object):
             Constructor
         '''
         self.imputer = None
+        self.active = False
 
         self.logger = logging.getLogger("MissingValueImputation")
 
@@ -49,6 +50,7 @@ class ImputerWrapper(object):
 
         self.imputer = Imputer(strategy=config.get("imputer_strategy"))
         self.imputer.fit(scenario.feature_data.values)
+        self.active = True
 
     def transform(self, scenario: ASlibScenario):
         '''
@@ -90,3 +92,20 @@ class ImputerWrapper(object):
         self.fit(scenario, config)
         scenario = self.transform(scenario)
         return scenario
+    
+    def get_attributes(self):
+        '''
+            returns a list of tuples of (attribute,value) 
+            for all learned attributes
+            
+            Arguments
+            ---------
+            config: ConfigSpace.Configuration
+                configuration
+
+            
+            Returns
+            -------
+            list of tuples of (attribute,value) 
+        '''
+        return ["Strategy=%s" %(self.imputer.strategy)]
