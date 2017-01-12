@@ -374,7 +374,7 @@ class AutoFolio(object):
             stats = val.validate_quality(
                 schedules=schedules, test_scenario=test_scenario)
         else:
-            raise ValueError("Unknown performance_type[0]")
+            raise ValueError("Unknown: %s" %(performance_type[0]))
         
         return stats
 
