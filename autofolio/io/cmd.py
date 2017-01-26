@@ -29,6 +29,8 @@ class CMDParser(object):
                          help="performance data in csv table (column: algorithm, row: instance, delimeter: ,)")
         csv.add_argument("--feature_csv", default=None,
                          help="instance features data in csv table (column: features, row: instance, delimeter: ,)")
+        csv.add_argument("--cv_csv", default=None,
+                         help="cross validation splits in csv table (column: split ID, row: instance, delimeter: ,)")
         csv.add_argument("--objective", default="solution_quality", choices=[
                          "runtime", "solution_quality"], help="Are the objective values in the performance data runtimes or an arbitrary solution quality (or cost) value")
         csv.add_argument("--runtime_cutoff", default=None, type=float,

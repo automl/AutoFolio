@@ -96,7 +96,8 @@ class AutoFolio(object):
                                        feat_fn=args_.feature_csv,
                                        objective=args_.objective,
                                        runtime_cutoff=args_.runtime_cutoff,
-                                       maximize=args_.maximize)
+                                       maximize=args_.maximize,
+                                       cv_fn=args_.cv_csv)
             else:
                 raise ValueError("Missing inputs to read scenario data.")
 
@@ -114,7 +115,7 @@ class AutoFolio(object):
                 self._save_model(
                     args_.save, scenario, feature_pre_pipeline, pre_solver, selector, config)
             else:
-                self.run_cv(config=config, scenario=scenario, folds=10)
+                self.run_cv(config=config, scenario=scenario, folds=scenario.cv_data.max().max())
 
     def _save_model(self, out_fn: str, scenario: ASlibScenario, feature_pre_pipeline: list, pre_solver: Aspeed, selector, config: Configuration):
         '''
@@ -240,10 +241,10 @@ class AutoFolio(object):
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
                                 # at most 10 function evaluations
-                                "runcount-limit": 100,
+                                "runcount-limit": 1000,
                                 "cs": self.cs,  # configuration space
                                 "deterministic": "true",
-                                "instances": [[i] for i in range(1,11)]
+                                "instances": [[i] for i in range(1,scenario.cv_data.max().max() +1)]
                                 })
 
         # necessary to use stats options related to scenario information
@@ -290,7 +291,11 @@ class AutoFolio(object):
                 stats = self.run_fold(config=config, scenario=scenario, fold=instance)
                 perf = stats.show()
             except ValueError:
-                perf = scenario.algorithm_cutoff_time * 10
+                if scenario.performance_type[0] == "runtime":
+                    perf = scenario.algorithm_cutoff_time * 10
+                else:
+                    # try to impute a worst case perf
+                    perf = scenario.performance_data.max().max()
                 
         if scenario.maximize[0]:
             perf *= -1

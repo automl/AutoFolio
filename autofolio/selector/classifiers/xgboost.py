@@ -133,7 +133,8 @@ class XGBoost(object):
          'objective': 'binary:logistic',
          'seed': 12345}
         for param in config:
-            self.attr.append("%s=%s"%(param[4:],config[param]))
+            if param.startswith("xgb:") and config[param] is not None:
+                self.attr.append("%s=%s"%(param[4:],config[param]))
             if param == "xgb:num_round":
                 continue
             xgb_config[param[4:]] = config[param]
