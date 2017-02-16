@@ -49,6 +49,35 @@ class CMDParser(object):
         opt.add_argument("--feature_vec", default=None, nargs="*",
                          help="feature vector to predict algorithm to use -- has to be used in combination with --load")
 
+        opt.add_argument("--config", type=str, default=None,
+                              help="(yaml) config file with run-specific "
+                              "configuration options for autofolio")
+
+        outer_cv = self._arg_parser.add_argument_group("Outer Cross-fold Validation Options")
+
+        outer_cv.add_argument("--outer-cv", action="store_true", default=False,
+                              help="Use an \"outer\" cross-fold validation scheme "
+                              "for tuning to ensure that SMAC does not peek at "
+                              "the test set during hyperparameter optimization.")
+
+        outer_cv.add_argument("--outer-cv-fold", type=int, default=None,
+                              help="If this argument is given in --outer-cv "
+                              "mode, then only the specified outer-cv fold "
+                              "will be processed. Presumably, the learned "
+                              "model will be saved using --save and the "
+                              "results for all folds will be combined later.")
+
+        outer_cv.add_argument("--out-template", type=str, default=None,
+                              help="If given, then the fit model and solver "
+                              "choices will be saved to this location. The "
+                              "string is considered a template. \"$fold\" "
+                              "will be replaced with the fold, and "
+                              "\"$type\" will be replaced with the "
+                              "appropriate file extension, \"pkl\" for the "
+                              "models and \"csv\" for the solver choices. See "
+                              "string.Template for more details about valid "
+                              "tempaltes.")
+
     def parse(self):
         '''
             uses the self._arg_parser object to parse the cmd line arguments
