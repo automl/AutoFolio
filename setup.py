@@ -1,8 +1,11 @@
 import os
 import setuptools
 
-
 requirements = ['ConfigSpace', 'numpy', 'scipy', 'scikit-learn', 'pandas', 'smac', 'xgboost']
+
+console_scripts = [
+    'autofolio=autofolio.autofolio:main'
+]
 
 setuptools.setup(
     name="autofolio",
@@ -25,5 +28,8 @@ setuptools.setup(
     install_requires=requirements,
     tests_require=['mock',
                    'nose'],
-    test_suite='nose.collector'
+    test_suite='nose.collector',
+    entry_points = {
+        'console_scripts': console_scripts
+    }
 )

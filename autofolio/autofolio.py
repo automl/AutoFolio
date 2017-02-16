@@ -753,3 +753,12 @@ class AutoFolio(object):
             return dict((inst, pre_solving_schedule.get(inst, []) + schedule) for inst, schedule in pred_schedules.items())
         else:
             return pred_schedules
+
+
+def main():
+    af = AutoFolio()
+    af.run_cli()
+
+
+if __name__ == "__main__":
+    main()
