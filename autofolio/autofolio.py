@@ -201,8 +201,8 @@ class AutoFolio(object):
 
             # save the model, if given an output location
             if out_template is not None:
-                out_template = string.Tempalte(out_template)
-                model_fn = out_template.replace(fold=cv_fold, type="pkl")
+                out_template = string.Template(out_template)
+                model_fn = out_template.substitute(fold=cv_fold, type="pkl")
                 
                 msg = "Writing model to: {}".format(model_fn)
                 self.logger.info(msg)
@@ -227,7 +227,7 @@ class AutoFolio(object):
                 # and x[0][0] gets the name of the solver from that pair
                 schedule_df['solver'] = schedule_df['solver'].apply(lambda x: x[0][0])
 
-                selections_fn = out_template.replace(fold=cv_fold, type="csv")
+                selections_fn = out_template.substitute(fold=cv_fold, type="csv")
 
                 msg = "Writing solver choices to: {}".format(selections_fn)
                 self.logger.info(msg)
@@ -389,13 +389,15 @@ class AutoFolio(object):
         wallclock_limit = autofolio_config.get("wallclock_limit", two_days_s)
 
         taf = ExecuteTAFuncDict(functools.partial(self.called_by_smac, scenario=scenario))
+        max_fold = scenario.cv_data.max().max()
+        max_fold = int(max_fold)
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
                                 # at most 10 function evaluations
                                 "runcount-limit": 1000,
                                 "cs": self.cs,  # configuration space
                                 "deterministic": "true",
-                                "instances": [[i] for i in range(1,scenario.cv_data.max().max() +1)],
+                                "instances": [[i] for i in range(1, max_fold+1)],
                                 "wallclock-limit": wallclock_limit
                                 })
 
@@ -528,10 +530,6 @@ class AutoFolio(object):
         self.logger.info("CV-Iteration: %d" % (fold))
         
         test_scenario, training_scenario = scenario.get_split(indx=fold)
-
-        
-        self.logger.debug("run_fold loop test instances: {}".format(len(test_scenario.instances)))
-
 
         feature_pre_pipeline, pre_solver, selector = self.fit(
             scenario=training_scenario, config=config)
