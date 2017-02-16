@@ -61,7 +61,49 @@ All other meta-data (such as runtime cutoff) has to be specified by command line
 
 ### Cross-Validation Mode
 
-The default mode of AutoFolio is running a 10-fold cross validation to estimate the performance of AutFolio.
+The default mode of AutoFolio is running a 10-fold cross-validation to estimate the performance of AutoFolio.
+
+### "Outer" Cross-Validation Mode
+
+"Outer" cross-validation again uses a 10-fold cross-validation scheme to
+evaluate AutoFolio; in this case, though, the subset for testing is not at all
+seen by AutoFolio during training. Internally, the nine training folds are
+further use in an "inner" cross-validation to avoid overfitting.
+
+The `--outer-cv` flag indicates to use this mode. For example:
+
+```
+autofolio -s aslib_data/BNSL-2016/ --outer-cv
+
+```
+#### Saving the outer cross-validation choices
+
+The learned model and solver choices for each instance can be saved using the
+`--out-template` option. If given, the fit model and solver choices will be
+saved to this location. The string is considered a template. "${fold}" will be 
+replaced with the outer cv fold, and "${type}" will be replaced with the 
+appropriate file extension, "pkl" for the models and "csv" for the solver 
+choices. See string.Template for more details about valid tempaltes.
+
+**N.B.** In many shells (such as bash), it is necessary to put the template in 
+single quotes to avoid shell replacement in the template. (Double quotes will
+not typically work.)
+
+```
+autofolio -s aslib_data/BNSL-2016/ --outer-cv --out-template 'bnsl.fold-${fold}.${type}'
+
+```
+#### Parallelizing the outer cross-validation
+
+Optionally, only a single "outer" cv fold can be run. Presumably, this is used
+to parallelize the outer cv calls across a cluster. The `--outer-cv-fold` option
+specifies which fold is used. Typically, this option would be combined with
+`--out-template`, and the results would be combined in post-processing.
+
+```
+autofolio -s aslib_data/BNSL-2016/ --outer-cv --outer-cv-fold 1 --out-template 'bnsl.fold-${fold}.${type}'
+```
+
 
 ### Prediction Mode
 
