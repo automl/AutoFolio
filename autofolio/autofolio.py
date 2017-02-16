@@ -7,6 +7,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
+import yaml
 
 from ConfigSpace.configuration_space import Configuration, \
     ConfigurationSpace
@@ -86,6 +87,7 @@ class AutoFolio(object):
         if args_.load:
             self.read_model_and_predict(
                 model_fn=args_.load, feature_vec=list(map(float, args_.feature_vec)))
+
         else:
 
             scenario = ASlibScenario()
@@ -101,8 +103,18 @@ class AutoFolio(object):
             else:
                 raise ValueError("Missing inputs to read scenario data.")
 
-            self.cs = self.get_cs(scenario)
+            config = {}
+            if args_.config is not None:
+                msg = "Reading yaml config file"
+                config = yaml.load(open(args_.config))
 
+            self.cs = self.get_cs(scenario, config)
+
+            if args_.outer_cv:
+                self._outer_cv(scenario, config, args_.outer_cv_fold, 
+                    args_.out_template)
+                return 0
+            
             if args_.tune:
                 config = self.get_tuned_config(scenario)
             else:
@@ -116,6 +128,114 @@ class AutoFolio(object):
                     args_.save, scenario, feature_pre_pipeline, pre_solver, selector, config)
             else:
                 self.run_cv(config=config, scenario=scenario, folds=scenario.cv_data.max().max())
+    
+    def _outer_cv(self, scenario: ASlibScenario, autofolio_config:dict=None, 
+            outer_cv_fold:int=None, out_template:str=None):
+        '''
+            Evaluate on a scenario using an "outer" cross-fold validation
+            scheme. In particular, this ensures that SMAC does not use the test
+            set during hyperparameter optimization.
+
+            Arguments
+            ---------
+            scenario: ASlibScenario
+                ASlib Scenario at hand
+            
+            autofolio_config: dict, or None
+                An optional dictionary of configuration options
+
+            outer_cv_fold: int, or None
+                If given, then only the single outer-cv fold is processed
+
+            out_template: str, or None
+                If given, the learned configurations are written to the 
+                specified locations. The string is considered a template, and
+                "%fold%" will be replaced with the fold.
+
+            Returns
+            -------
+            stats: validate.Stats
+                Performance over all outer-cv folds
+
+        '''
+        import string
+
+        outer_stats = None
+
+        # For each outer split
+        outer_cv_folds = range(1, 11)
+        if outer_cv_fold is not None:
+            outer_cv_folds = range(outer_cv_fold, outer_cv_fold+1)
+
+        for cv_fold in outer_cv_folds:
+            
+            # Use ‘ASlibScenario.get_split()’ to get the outer split
+            outer_testing, outer_training = scenario.get_split(cv_fold)
+            
+            msg = ">>>>> Outer CV fold: {} <<<<<".format(cv_fold)
+            self.logger.info(msg)
+
+            # Use ASlibScenario.create_cv_splits() to get an inner-cv
+            outer_training.create_cv_splits(n_folds=10)
+            
+            # Use ‘AutoFolio.get_tuned_config()’ to tune on inner-cv
+            config = self.get_tuned_config(
+                outer_training, 
+                autofolio_config=autofolio_config
+            )
+            
+            # Use `AutoFolio.run_fold()’ to get the performance on the outer split
+            stats, fit, schedule = self.run_fold(
+                config, 
+                scenario, 
+                cv_fold, 
+                return_fit=True
+            )
+
+            feature_pre_pipeline, pre_solver, selector = fit
+
+            if outer_stats is None:
+                outer_stats = stats
+            else:
+                outer_stats.merge(stats)
+
+            # save the model, if given an output location
+            if out_template is not None:
+                out_template = string.Tempalte(out_template)
+                model_fn = out_template.replace(fold=cv_fold, type="pkl")
+                
+                msg = "Writing model to: {}".format(model_fn)
+                self.logger.info(msg)
+
+                self._save_model(
+                    model_fn, 
+                    scenario, 
+                    feature_pre_pipeline, 
+                    pre_solver, 
+                    selector, 
+                    config
+                )
+
+                # convert the schedule to a data frame
+                schedule_df = pd.Series(schedule, name="solver")
+                schedule_df.index.name = "instance"
+                schedule_df = schedule_df.reset_index()
+
+                # just keep the solver name; we don't care about the time
+
+                # x[0] gets the first pair in the schedule list
+                # and x[0][0] gets the name of the solver from that pair
+                schedule_df['solver'] = schedule_df['solver'].apply(lambda x: x[0][0])
+
+                selections_fn = out_template.replace(fold=cv_fold, type="csv")
+
+                msg = "Writing solver choices to: {}".format(selections_fn)
+                self.logger.info(msg)
+
+                schedule_df.to_csv(selections_fn, index=False)
+
+        self.logger.info(">>>>> Final Stats <<<<<")
+        outer_stats.show()
 
     def _save_model(self, out_fn: str, scenario: ASlibScenario, feature_pre_pipeline: list, pre_solver: Aspeed, selector, config: Configuration):
         '''
@@ -178,7 +298,7 @@ class AutoFolio(object):
         print("Selected Schedule [(algorithm, budget)]: %s" % (
             pred["pseudo_instance"]))
 
-    def get_cs(self, scenario: ASlibScenario):
+    def get_cs(self, scenario: ASlibScenario, autofolio_config:dict=None):
         '''
             returns the parameter configuration space of AutoFolio
             (based on the automl config space: https://github.com/automl/ConfigSpace)
@@ -187,32 +307,56 @@ class AutoFolio(object):
             ---------
             scenario: aslib_scenario.aslib_scenario.ASlibScenario
                 aslib scenario at hand
+
+            autofolio_config: dict, or None
+                An optional dictionary of configuration options
         '''
 
         self.cs = ConfigurationSpace()
 
-        # add feature steps as binary parameters
-        for fs in scenario.feature_steps:
-            fs_param = CategoricalHyperparameter(name="fgroup_%s" % (
-                fs), choices=[True, False], default=fs in scenario.feature_steps_default)
+        # only allow the feature groups specified in the config file
+        # by default, though, all of the feature groups are allowed.
+        allowed_feature_groups = autofolio_config.get("allowed_feature_groups", 
+            scenario.feature_steps)
+
+        if len(allowed_feature_groups) == 0:
+            msg = "Please ensure at least one feature group is allowed"
+            raise ValueError(msg)
+
+        for fs in allowed_feature_groups:
+            choices = [True, False]
+            default = True
+            
+            fs_param = CategoricalHyperparameter(name="fgroup_%s" % (fs),
+                choices=choices, default=default)
             self.cs.add_hyperparameter(fs_param)
 
         # preprocessing
-        PCAWrapper.add_params(self.cs)
-        ImputerWrapper.add_params(self.cs)
-        StandardScalerWrapper.add_params(self.cs)
+        if autofolio_config.get("pca", True):
+            PCAWrapper.add_params(self.cs)
+
+        if autofolio_config.get("impute", True):
+            ImputerWrapper.add_params(self.cs)
+
+        if autofolio_config.get("scale", True):
+            StandardScalerWrapper.add_params(self.cs)
 
         # Pre-Solving
         if scenario.performance_type[0] == "runtime":
-            Aspeed.add_params(
-                cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
+            if autofolio_config.get("presolve", True):
+                Aspeed.add_params(
+                    cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
 
         # classifiers
-        RandomForest.add_params(self.cs)
-        XGBoost.add_params(self.cs)
+        if autofolio_config.get("random_forest_classifier", True):
+            RandomForest.add_params(self.cs)
+        
+        if autofolio_config.get("xgboost_classifier", True):
+            XGBoost.add_params(self.cs)
        
         # regressors
-        RandomForestRegressor.add_params(self.cs)
+        if autofolio_config.get("random_forest_regressor", True):
+            RandomForestRegressor.add_params(self.cs)
 
         # selectors
         PairwiseClassifier.add_params(self.cs)
@@ -222,7 +366,7 @@ class AutoFolio(object):
 
         return self.cs
 
-    def get_tuned_config(self, scenario: ASlibScenario):
+    def get_tuned_config(self, scenario: ASlibScenario, autofolio_config:dict=dict()):
         '''
             uses SMAC3 to determine a well-performing configuration in the configuration space self.cs on the given scenario
 
@@ -231,11 +375,18 @@ class AutoFolio(object):
             scenario: ASlibScenario
                 ASlib Scenario at hand
 
+            autofolio_config: dict, or None
+                An optional dictionary of configuration options
+
             Returns
             -------
             Configuration
                 best incumbent configuration found by SMAC
         '''
+
+        # two days is 48 hours, 60 minutes each, 60 seconds each
+        two_days_s = 48 * 60 * 60
+        wallclock_limit = autofolio_config.get("wallclock_limit", two_days_s)
 
         taf = ExecuteTAFuncDict(functools.partial(self.called_by_smac, scenario=scenario))
 
@@ -244,7 +395,8 @@ class AutoFolio(object):
                                 "runcount-limit": 1000,
                                 "cs": self.cs,  # configuration space
                                 "deterministic": "true",
-                                "instances": [[i] for i in range(1,scenario.cv_data.max().max() +1)]
+                                "instances": [[i] for i in range(1,scenario.cv_data.max().max() +1)],
+                                "wallclock-limit": wallclock_limit
                                 })
 
         # necessary to use stats options related to scenario information
@@ -342,7 +494,7 @@ class AutoFolio(object):
 
         return par10
 
-    def run_fold(self, config: Configuration, scenario:ASlibScenario, fold:int):
+    def run_fold(self, config: Configuration, scenario:ASlibScenario, fold:int, return_fit:bool=False):
         '''
             run a given fold of cross validation
             
@@ -354,15 +506,32 @@ class AutoFolio(object):
                 parameter configuration to use for preprocessing
             fold: int
                 fold id
+
+            return_fit: bool
+                optionally, the learned preprocessing options, presolver and
+                selector can be returned
                 
             Returns
             -------
             Stats()
+
+            (pre_pipeline, pre_solver, selector):
+                only present if return_fit is True
+                the pipeline components fit with the configuration options
+
+            schedule: dict of string -> list of (solver, cutoff) pairs
+                only present if return_fit is True
+                the solver choices for each instance
+                
                 
         '''
         self.logger.info("CV-Iteration: %d" % (fold))
         
         test_scenario, training_scenario = scenario.get_split(indx=fold)
+
+        
+        self.logger.debug("run_fold loop test instances: {}".format(len(test_scenario.instances)))
+
 
         feature_pre_pipeline, pre_solver, selector = self.fit(
             scenario=training_scenario, config=config)
@@ -380,7 +549,10 @@ class AutoFolio(object):
         else:
             raise ValueError("Unknown: %s" %(performance_type[0]))
         
-        return stats
+        if return_fit:
+            return stats, (feature_pre_pipeline, pre_solver, selector), schedules
+        else:
+            return stats
 
     def fit(self, scenario: ASlibScenario, config: Configuration):
         '''
