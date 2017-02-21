@@ -59,9 +59,89 @@ One file with the performance data of each algorithm on each instance (each row 
 And another file with the instance features for each instance (each row an instance and each column an feature).
 All other meta-data (such as runtime cutoff) has to be specified by command line options (see `python3 scripts/autofolio --help`).
 
+### Configuration file
+
+A YAML configuration file can be given to control some of the internal AutoFolio
+behavior. It is given with the `--config` option. 
+
+The recognized options and their types are as follows.
+
+* `wallclock_limit`. The amount of time (in seconds) for optimizing 
+  hyperparameters. Type: integer. Default: 2 days.
+
+#### Feature groups
+  
+* `allowed_feature_groups`. A list of the feature groups to consider for 
+  prediction. This must match those specified in the ASlib scenario. Type: list
+  of strings. Default: all feature sets are allowed.
+
+#### Preprocessing
+
+* `pca`. Whether to include PCA as a choice for preprocessing. Type: Boolean. Default: True.
+
+* `impute`. Whether missing value imputation is a choice for preprocessing. Type: Boolean. Default: True.
+
+* `scale`. Whether z-score scaling is a choice for preprocessing. Type: Boolean. Default: True.
+
+#### Presolving
+
+* `presolve`. Whether to use a presolver. Type: Boolean. Default: True.
+
+#### Algorithm selection model classes
+
+* `random_forest_classifier`. Whether the random forest classifier is a model class choice. Type: Boolean. Default: True.
+
+* `xgboost_classifier`. Whether the XGBoost classifier is a model class choice. Type: Boolean. Default: True.
+
+* `random_forest_regressor`. Whether the random forest regressor is a model class choice. Type: Boolean. Default: True.
+
 ### Cross-Validation Mode
 
-The default mode of AutoFolio is running a 10-fold cross validation to estimate the performance of AutFolio.
+The default mode of AutoFolio is running a 10-fold cross-validation to estimate the performance of AutoFolio.
+
+### "Outer" Cross-Validation Mode
+
+"Outer" cross-validation again uses a 10-fold cross-validation scheme to
+evaluate AutoFolio; in this case, though, the subset for testing is not at all
+seen by AutoFolio during training. Internally, the nine training folds are
+further use in an "inner" cross-validation to avoid overfitting.
+
+The `--outer-cv` flag indicates to use this mode. For example:
+
+```
+autofolio -s aslib_data/BNSL-2016/ --outer-cv
+
+```
+#### Saving the outer cross-validation choices
+
+The learned model and solver choices for each instance can be saved using the
+`--out-template` option. If given, the fit model and solver choices will be
+saved to this location. The string is considered a template. "${fold}" will be 
+replaced with the outer cv fold, and "${type}" will be replaced with the 
+appropriate file extension, "pkl" for the models and "csv" for the solver 
+choices. See string.Template for more details about valid tempaltes.
+
+**N.B.** In many shells (such as bash), it is necessary to put the template in 
+single quotes to avoid shell replacement in the template. (Double quotes will
+not typically work.)
+
+```
+autofolio -s aslib_data/BNSL-2016/ --outer-cv --out-template 'bnsl.fold-${fold}.${type}'
+
+```
+#### Parallelizing the outer cross-validation
+
+Optionally, only a single "outer" cv fold can be run. Presumably, this is used
+to parallelize the outer cv calls across a cluster. The `--outer-cv-fold` option
+specifies which fold is used. Typically, this option would be combined with
+`--out-template`, and the results would be combined in post-processing.
+
+**N.B.** This number should range from 1 to 10 (not 0 to 9).
+
+```
+autofolio -s aslib_data/BNSL-2016/ --outer-cv --outer-cv-fold 1 --out-template 'bnsl.fold-${fold}.${type}'
+```
+
 
 ### Prediction Mode
 
