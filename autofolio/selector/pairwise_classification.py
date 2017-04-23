@@ -60,8 +60,16 @@ class PairwiseClassifier(object):
 
         self.algorithms = scenario.algorithms
 
+        from sklearn.utils import check_array
+        from sklearn.tree._tree import DTYPE
+
         n_algos = len(scenario.algorithms)
         X = scenario.feature_data.values
+        # since sklearn (at least the RFs) 
+        # uses float32 and we pass float64,
+        # the normalization ensures that floats
+        # are not converted to inf or -inf
+        X = (X - np.min(X)) / (np.max(X) - np.min(X))
         for i in range(n_algos):
             for j in range(i + 1, n_algos):
                 y_i = scenario.performance_data[scenario.algorithms[i]].values
