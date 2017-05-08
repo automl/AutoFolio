@@ -127,7 +127,7 @@ class AutoFolio(object):
                 self._save_model(
                     args_.save, scenario, feature_pre_pipeline, pre_solver, selector, config)
             else:
-                self.run_cv(config=config, scenario=scenario, folds=scenario.cv_data.max().max())
+                self.run_cv(config=config, scenario=scenario, folds=int(scenario.cv_data.max().max()))
     
     def _outer_cv(self, scenario: ASlibScenario, autofolio_config:dict=None, 
             outer_cv_fold:int=None, out_template:str=None):
