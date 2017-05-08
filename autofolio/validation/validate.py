@@ -46,6 +46,10 @@ class Stats(object):
 
         if remove_unsolvable and self.runtime_cutoff:
             rm_string = "removed"
+            self.logger.debug("Statistics before removing unsolvable instances")
+            self.logger.debug("PAR1: %.4f" %(self.par1 / (self.timeouts + self.solved)))
+            self.logger.debug("PAR10: %.4f" %(self.par10 / (self.timeouts + self.solved)))
+            self.logger.debug("Timeouts: %d / %d" %(self.timeouts, self.timeouts + self.solved))
             timeouts = self.timeouts - self.unsolvable
             par1 = self.par1 - (self.unsolvable * self.runtime_cutoff)
             par10 = self.par10 - (self.unsolvable * self.runtime_cutoff * 10)
@@ -64,7 +68,7 @@ class Stats(object):
             self.logger.info("Presolved during feature computation: %d / %d" % (self.presolved_feats, n_samples))
             self.logger.info("Solved: %d / %d" % (self.solved, n_samples))
             self.logger.info("Unsolvable (%s): %d / %d" % 
-                             (rm_string, self.unsolvable, n_samples))
+                             (rm_string, self.unsolvable, n_samples+self.unsolvable))
         else:
             n_samples = self.solved
             self.logger.info("Number of instances: %d" %(n_samples))

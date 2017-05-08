@@ -394,11 +394,12 @@ class AutoFolio(object):
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
                                 # at most 10 function evaluations
-                                "runcount-limit": 1000,
+                                "runcount-limit": 100,
                                 "cs": self.cs,  # configuration space
                                 "deterministic": "true",
                                 "instances": [[i] for i in range(1, max_fold+1)],
-                                "wallclock-limit": wallclock_limit
+                                "wallclock-limit": wallclock_limit,
+                                "output-dir" : ""
                                 })
 
         # necessary to use stats options related to scenario information
@@ -442,7 +443,7 @@ class AutoFolio(object):
             perf = self.run_cv(config=config, scenario=scenario)
         else:
             try:
-                stats = self.run_fold(config=config, scenario=scenario, fold=instance)
+                stats = self.run_fold(config=config, scenario=scenario, fold=int(instance))
                 perf = stats.show()
             except ValueError:
                 if scenario.performance_type[0] == "runtime":
