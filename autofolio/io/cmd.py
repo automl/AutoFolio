@@ -40,6 +40,10 @@ class CMDParser(object):
         opt = self._arg_parser.add_argument_group("Optional Options")
         opt.add_argument("-t", "--tune", action="store_true", default=False,
                          help="uses SMAC3 to determine a better parameter configuration")
+        opt.add_argument("--runcount_limit", type=int, default=42,
+                         help="maximal number of AS evaluations (SMAC budget)")
+        opt.add_argument("--wallclock_limit", type=int, default=300,
+                         help="wallclock time limit in sec (SMAC budget)")
         opt.add_argument(
             "-v", "--verbose", choices=["INFO", "DEBUG"], default="INFO", help="verbose level")
         opt.add_argument("--save", type=str, default=None,

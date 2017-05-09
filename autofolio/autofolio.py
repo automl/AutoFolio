@@ -366,7 +366,10 @@ class AutoFolio(object):
 
         return self.cs
 
-    def get_tuned_config(self, scenario: ASlibScenario, autofolio_config:dict=dict()):
+    def get_tuned_config(self, scenario: ASlibScenario, 
+                         runcount_limit:int=42,
+                         wallclock_limit:int=300,
+                         autofolio_config:dict=dict()):
         '''
             uses SMAC3 to determine a well-performing configuration in the configuration space self.cs on the given scenario
 
@@ -374,7 +377,11 @@ class AutoFolio(object):
             ---------
             scenario: ASlibScenario
                 ASlib Scenario at hand
-
+            runcount_limit: int
+                runcount_limit for SMAC scenario
+            wallclock_limit: int
+                wallclock limit in sec for SMAC scenario
+                (overwritten by autofolio_config)
             autofolio_config: dict, or None
                 An optional dictionary of configuration options
 
@@ -385,8 +392,7 @@ class AutoFolio(object):
         '''
 
         # two days is 48 hours, 60 minutes each, 60 seconds each
-        two_days_s = 48 * 60 * 60
-        wallclock_limit = autofolio_config.get("wallclock_limit", two_days_s)
+        wallclock_limit = autofolio_config.get("wallclock_limit", wallclock_limit)
 
         taf = ExecuteTAFuncDict(functools.partial(self.called_by_smac, scenario=scenario))
         max_fold = scenario.cv_data.max().max()
@@ -394,7 +400,7 @@ class AutoFolio(object):
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
                                 # at most 10 function evaluations
-                                "runcount-limit": 100,
+                                "runcount-limit": runcount_limit,
                                 "cs": self.cs,  # configuration space
                                 "deterministic": "true",
                                 "instances": [[i] for i in range(1, max_fold+1)],
