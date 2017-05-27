@@ -16,7 +16,7 @@ __author__ = "Marius Lindauer"
 __license__ = "BSD"
 
 
-class PairwiseClassifier(object):
+class MultiClassifier(object):
 
     @staticmethod
     def add_params(cs: ConfigurationSpace):
@@ -26,27 +26,27 @@ class PairwiseClassifier(object):
 
         try:
             selector = cs.get_hyperparameter("selector")
-            selector.choices.append("PairwiseClassifier")
+            selector.choices.append("MultiClassifier")
         except KeyError:
             selector = CategoricalHyperparameter(
-                "selector", choices=["PairwiseClassifier"], default="PairwiseClassifier")
+                "selector", choices=["MultiClassifier"], default="MultiClassifier")
             cs.add_hyperparameter(selector)
             
-        classifier = cs.get_hyperparameter("classifier")
-        cond = InCondition(child=classifier, parent=selector, values=["PairwiseClassifier"])
+        mclassifier = cs.get_hyperparameter("multi_classifier")
+        cond = InCondition(child=mclassifier, parent=selector, values=["MultiClassifier"])
         cs.add_condition(cond)
 
-    def __init__(self, classifier_class):
+    def __init__(self, multi_classifier_class):
         '''
             Constructor
         '''
-        self.classifiers = []
-        self.logger = logging.getLogger("PairwiseClassifier")
-        self.classifier_class = classifier_class
+        self.classifier = None
+        self.logger = logging.getLogger("MultiClassifier")
+        self.multi_classifier_class = multi_classifier_class
 
     def fit(self, scenario: ASlibScenario, config: Configuration):
         '''
-            fit weighted pairwise classifiers to ASlib scenario data
+            fit multi-class classifier to ASlib scenario data
 
             Arguments
             ---------
@@ -55,8 +55,8 @@ class PairwiseClassifier(object):
             config: ConfigSpace.Configuration
                 configuration
         '''
-        self.logger.info("Fit PairwiseClassifier with %s" %
-                         (self.classifier_class))
+        self.logger.info("Fit MultiClassifier with %s" %
+                         (self.multi_classifier_class))
 
         self.algorithms = scenario.algorithms
 
@@ -70,16 +70,11 @@ class PairwiseClassifier(object):
         # the normalization ensures that floats
         # are not converted to inf or -inf
         X = (X - np.min(X)) / (np.max(X) - np.min(X))
-        for i in range(n_algos):
-            for j in range(i + 1, n_algos):
-                y_i = scenario.performance_data[scenario.algorithms[i]].values
-                y_j = scenario.performance_data[scenario.algorithms[j]].values
-                y = y_i < y_j
-                weights = np.abs(y_i - y_j)
-                clf = self.classifier_class()
-                clf.fit(X, y, config, weights)
-                self.classifiers.append(clf)
-
+        
+        Y = scenario.performance_data.values
+        self.classifier = self.multi_classifier_class()
+        self.classifier.fit(X, Y, config)
+        
     def predict(self, scenario: ASlibScenario):
         '''
             predict schedules for all instances in ASLib scenario data
@@ -100,21 +95,10 @@ class PairwiseClassifier(object):
         else:
             cutoff = 2**31
 
-        n_algos = len(scenario.algorithms)
         X = scenario.feature_data.values
-        scores = np.zeros((X.shape[0], n_algos))
-        clf_indx = 0
-        for i in range(n_algos):
-            for j in range(i + 1, n_algos):
-                clf = self.classifiers[clf_indx]
-                Y = clf.predict(X)
-                scores[Y == 1, i] += 1
-                scores[Y == 0, j] += 1
-                clf_indx += 1
-
-        #self.logger.debug(
-        #   sorted(list(zip(scenario.algorithms, scores)), key=lambda x: x[1], reverse=True))
-        algo_indx = np.argmax(scores, axis=1)
+        Y = self.classifier.predict(X) # vector of 0s and a single 1 for each instance
+        
+        algo_indx = np.argmax(Y, axis=1)
         
         schedules = dict((str(inst),[s]) for s,inst in zip([(scenario.algorithms[i], cutoff+1) for i in algo_indx], scenario.feature_data.index))
         #self.logger.debug(schedules)
@@ -129,7 +113,7 @@ class PairwiseClassifier(object):
             -------
             list of tuples of (attribute,value) 
         '''
-        class_attr = self.classifiers[0].get_attributes()
-        attr = [{self.classifier_class.__name__:class_attr}]
+        class_attr = self.multi_classifier_class.get_attributes()
+        attr = [{self.multi_classifier_class.__name__:class_attr}]
 
         return attr

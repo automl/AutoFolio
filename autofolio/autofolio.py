@@ -36,11 +36,15 @@ from autofolio.pre_solving.aspeed_schedule import Aspeed
 from autofolio.selector.classifiers.random_forest import RandomForest
 from autofolio.selector.classifiers.xgboost import XGBoost
 
+# multi-class classifiers
+from autofolio.selector.multiclass_classifiers.dnn import DNN
+
 # regressors
 from autofolio.selector.regressors.random_forest import RandomForestRegressor
 
 # selectors
 from autofolio.selector.pairwise_classification import PairwiseClassifier
+from autofolio.selector.multi_classification import MultiClassifier
 from autofolio.selector.pairwise_regression import PairwiseRegression
 
 # validation
@@ -342,25 +346,30 @@ class AutoFolio(object):
             StandardScalerWrapper.add_params(self.cs)
 
         # Pre-Solving
-        if scenario.performance_type[0] == "runtime":
-            if autofolio_config.get("presolve", True):
-                Aspeed.add_params(
-                    cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
+        #if scenario.performance_type[0] == "runtime":
+            #if autofolio_config.get("presolve", True):
+                #Aspeed.add_params(
+                #    cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
 
-        # classifiers
+        # binary classifiers
         if autofolio_config.get("random_forest_classifier", True):
             RandomForest.add_params(self.cs)
         
         if autofolio_config.get("xgboost_classifier", True):
             XGBoost.add_params(self.cs)
+            
+        # multi-class classifiers
+        if autofolio_config.get("DNN", True):
+            DNN.add_params(self.cs)
        
         # regressors
         if autofolio_config.get("random_forest_regressor", True):
             RandomForestRegressor.add_params(self.cs)
 
         # selectors
-        PairwiseClassifier.add_params(self.cs)
-        PairwiseRegression.add_params(self.cs)       
+        #PairwiseClassifier.add_params(self.cs)
+        MultiClassifier.add_params(self.cs)
+        #PairwiseRegression.add_params(self.cs)       
 
         self.logger.debug(self.cs)
 
@@ -711,6 +720,15 @@ class AutoFolio(object):
                 clf_class = XGBoost
 
             selector = PairwiseClassifier(classifier_class=clf_class)
+            selector.fit(scenario=scenario, config=config)
+
+        if config.get("selector") == "MultiClassifier":
+
+            clf_class = None
+            if config.get("multi_classifier") == "DNN":
+                clf_class = DNN
+
+            selector = MultiClassifier(multi_classifier_class=clf_class)
             selector.fit(scenario=scenario, config=config)
 
         if config.get("selector") == "PairwiseRegressor":

@@ -68,16 +68,17 @@ def visualize(feature_pre_pipeline, pre_solver, selector):
         except AttributeError:
             #traceback.print_exc()
             pass
-            
-    for idx,presolver in enumerate(pre_solver.schedule):
-        dot.node('pre_%d' %(idx), "%s for %d sec" %(presolver[0], presolver[1]))
-        if idx > 0:
-            dot.edge('pre_%d' %(idx-1),'pre_%d' %(idx))
-        elif feature_pre_pipeline:
-            dot.edge('fpp_%d' %(fpp_idx),'pre_%d' %(idx))
+        
+    if pre_solver:    
+        for idx,presolver in enumerate(pre_solver.schedule):
+            dot.node('pre_%d' %(idx), "%s for %d sec" %(presolver[0], presolver[1]))
+            if idx > 0:
+                dot.edge('pre_%d' %(idx-1),'pre_%d' %(idx))
+            elif feature_pre_pipeline:
+                dot.edge('fpp_%d' %(fpp_idx),'pre_%d' %(idx))
             
     dot.node("selector", selector.__class__.__name__)
-    if pre_solver.schedule:
+    if pre_solver and pre_solver.schedule:
         dot.edge('pre_%d' %(len(pre_solver.schedule)-1), "selector")
     elif feature_pre_pipeline:
         dot.edge('fpp_%d' %(fpp_idx),'selector')

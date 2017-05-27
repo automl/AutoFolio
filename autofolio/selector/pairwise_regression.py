@@ -47,7 +47,7 @@ class PairwiseRegression(object):
 
     def fit(self, scenario: ASlibScenario, config: Configuration):
         '''
-            fit pca object to ASlib scenario data
+            fit pairwise regression models to ASlib scenario data
 
             Arguments
             ---------
