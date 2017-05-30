@@ -120,7 +120,8 @@ class AutoFolio(object):
                 return 0
             
             if args_.tune:
-                config = self.get_tuned_config(scenario)
+                config = self.get_tuned_config(scenario, runcount_limit=args_.runcount_limit,
+                                               wallclock_limit=args_.wallclock_limit)
             else:
                 config = self.cs.get_default_configuration()
             self.logger.debug(config)
@@ -134,7 +135,9 @@ class AutoFolio(object):
                 self.run_cv(config=config, scenario=scenario, folds=int(scenario.cv_data.max().max()))
     
     def _outer_cv(self, scenario: ASlibScenario, autofolio_config:dict=None, 
-            outer_cv_fold:int=None, out_template:str=None):
+            outer_cv_fold:int=None, out_template:str=None,
+            runcount_limit:int=42, wallclock_limit:int=300
+            ):
         '''
             Evaluate on a scenario using an "outer" cross-fold validation
             scheme. In particular, this ensures that SMAC does not use the test
@@ -155,6 +158,12 @@ class AutoFolio(object):
                 If given, the learned configurations are written to the 
                 specified locations. The string is considered a template, and
                 "%fold%" will be replaced with the fold.
+                
+            runcount_limit: int
+                runcount_limit for SMAC scenario
+            
+            wallclock_limit: int
+                wallclock limit in sec for SMAC scenario
 
             Returns
             -------
@@ -185,7 +194,9 @@ class AutoFolio(object):
             # Use ‘AutoFolio.get_tuned_config()’ to tune on inner-cv
             config = self.get_tuned_config(
                 outer_training, 
-                autofolio_config=autofolio_config
+                autofolio_config=autofolio_config,
+                runcount_limit=runcount_limit,
+                wallclock_limit=wallclock_limit
             )
             
             # Use `AutoFolio.run_fold()’ to get the performance on the outer split
