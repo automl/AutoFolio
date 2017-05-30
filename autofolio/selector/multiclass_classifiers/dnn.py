@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 __author__ = "Marius Lindauer"
 __license__ = "BSD"
 
-LAYERS = 2
+LAYERS = 4
 
 class DNN(object):
 
@@ -56,7 +56,7 @@ class DNN(object):
                 child=act_func, parent=classifier, values=["DNN"])
             cs.add_condition(cond)
             dropout = UniformFloatHyperparameter(
-                name="dnn:layer%d_dropout_rate" %(i), lower=0, upper=0.9, default=0.5)
+                name="dnn:layer%d_dropout_rate" %(i), lower=0, upper=0.99, default=0.5)
             cs.add_hyperparameter(dropout)
             cond = InCondition(
                 child=dropout, parent=classifier, values=["DNN"])
@@ -131,21 +131,23 @@ class DNN(object):
             return K.dot(y_true, K.transpose(y_pred))
         
         self.model.compile(
-              #loss='categorical_crossentropy',
-              loss=as_loss,
+              loss='categorical_crossentropy',
+              #loss=as_loss,
               optimizer=keras.optimizers.SGD(lr=config["dnn:lr"], momentum=config["dnn:momentum"], nesterov=True),
               metrics=['accuracy',as_loss])
         
         es = EarlyStopping(monitor="val_loss", patience=1)
         
-        history = self.model.fit(X, Y_gap, epochs=200, batch_size=16, validation_split=0.33,
+        history = self.model.fit(X, Y_hot, epochs=200, batch_size=16, validation_split=0.33,
                                  callbacks=[es])#Y.shape[0])
         
         plt.plot(history.history["loss"])
         plt.plot(history.history["val_loss"])
+        plt.plot(history.history["val_acc"])
+        plt.plot(history.history["val_as_loss"])
         plt.ylabel('model loss')
         plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper left')
+        plt.legend(['train loss', 'val_loss', 'val_acc', 'val_as_loss'], loc='upper right')
         plt.savefig("loss_dnn_%d.png" %(random.randint(1,2**31)))
 
     def predict(self, X):
