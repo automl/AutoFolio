@@ -7,3 +7,5 @@ smac
 git+https://github.com/mlindauer/ASlibScenario
 xgboost
 sphinx_bootstrap_theme
+tensorflow
+keras
