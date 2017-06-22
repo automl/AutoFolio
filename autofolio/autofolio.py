@@ -351,7 +351,7 @@ class AutoFolio(object):
         if autofolio_config.get("random_forest_classifier", True):
             RandomForest.add_params(self.cs)
         
-        if autofolio_config.get("xgboost_classifier", True):
+        #if autofolio_config.get("xgboost_classifier", True):
             XGBoost.add_params(self.cs)
        
         # regressors

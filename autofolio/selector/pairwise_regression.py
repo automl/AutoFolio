@@ -28,6 +28,8 @@ class PairwiseRegression(object):
             selector = cs.get_hyperparameter("selector")
             selector.choices.append("PairwiseRegressor")
             selector._num_choices += 1
+            selector.choices_vector = list(range(selector._num_choices))
+            selector._choices_set = set(selector.choices_vector)
         except KeyError:
             selector = CategoricalHyperparameter(
                 "selector", choices=["PairwiseRegressor"], default="PairwiseRegressor")

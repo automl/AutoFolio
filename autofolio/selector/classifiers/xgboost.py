@@ -26,6 +26,8 @@ class XGBoost(object):
             classifier = cs.get_hyperparameter("classifier")
             classifier.choices.append("XGBoost")
             classifier._num_choices += 1
+            classifier.choices_vector = list(range(classifier._num_choices))
+            classifier._choices_set = set(classifier.choices_vector)
         except KeyError:
             classifier = CategoricalHyperparameter(
                 "classifier", choices=["XGBoost"], default="XGBoost")

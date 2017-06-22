@@ -26,6 +26,8 @@ class RandomForestRegressor(object):
             regressor = cs.get_hyperparameter("regressor")
             regressor.choices.append("RandomForestRegressor")
             regressor._num_choices += 1
+            regressor.choices_vector = list(range(regressor._num_choices))
+            regressor._choices_set = set(regressor.choices_vector)
         except KeyError:
             regressor = CategoricalHyperparameter(
                 "regressor", choices=["RandomForestRegressor"], default="RandomForestRegressor")
