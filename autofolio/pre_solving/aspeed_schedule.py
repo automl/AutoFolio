@@ -35,7 +35,7 @@ class Aspeed(object):
         '''
 
         pre_solving = CategoricalHyperparameter(
-            "presolving", choices=[True, False], default=True)
+            "presolving", choices=[True, False], default=False)
         cs.add_hyperparameter(pre_solving)
         pre_cutoff = UniformIntegerHyperparameter(
             "pre:cutoff", lower=1, upper=cutoff, default=math.ceil(cutoff * 0.1), log=True)
