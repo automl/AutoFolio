@@ -3,6 +3,7 @@ import traceback
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
     UniformFloatHyperparameter, UniformIntegerHyperparameter
@@ -46,6 +47,7 @@ class PairwiseClassifier(object):
         self.classifiers = []
         self.logger = logging.getLogger("PairwiseClassifier")
         self.classifier_class = classifier_class
+        self.normalizer = MinMaxScaler()
 
     def fit(self, scenario: ASlibScenario, config: Configuration):
         '''
@@ -72,7 +74,8 @@ class PairwiseClassifier(object):
         # uses float32 and we pass float64,
         # the normalization ensures that floats
         # are not converted to inf or -inf
-        X = (X - np.min(X)) / (np.max(X) - np.min(X))
+        #X = (X - np.min(X)) / (np.max(X) - np.min(X))
+        X = self.normalizer.fit_transform(X)
         for i in range(n_algos):
             for j in range(i + 1, n_algos):
                 y_i = scenario.performance_data[scenario.algorithms[i]].values
@@ -105,6 +108,7 @@ class PairwiseClassifier(object):
 
         n_algos = len(scenario.algorithms)
         X = scenario.feature_data.values
+        X = self.normalizer.transform(X)
         scores = np.zeros((X.shape[0], n_algos))
         clf_indx = 0
         for i in range(n_algos):
