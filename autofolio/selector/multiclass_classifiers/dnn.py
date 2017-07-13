@@ -15,6 +15,7 @@ from aslib_scenario.aslib_scenario import ASlibScenario
 
 from sklearn.preprocessing import StandardScaler
 
+import keras
 from keras import backend as K
 
 import matplotlib.pyplot as plt
@@ -71,35 +72,43 @@ class DNN(object):
         '''
         logging.basicConfig(level="INFO")
         
-        
-        Y_gap = Y - np.repeat([np.min(Y, axis=1)], Y.shape[1], axis=0).T
-        Y_gap /= np.max(Y_gap)            
-        
-        #=======================================================================
-        # Y_hot = np.zeros(Y.shape)
-        # Y_sel = np.argmin(Y, axis=1)
-        # for i,y in enumerate(Y_sel):
-        #     Y_hot[i,y] = 1
-        #=======================================================================
-        
         X = self.scaler.fit_transform(X)
         
         def as_loss(y_true, y_pred):
             return K.dot(y_true, K.transpose(y_pred))
         
-        an = AutoNet(max_layers=5, n_classes=Y_gap.shape[1])
-        config = an.fit(X_train=X, y_train=Y_gap, X_valid=X, y_valid=Y_gap, max_epochs=50, 
-                        runcount_limit=50, loss_func=as_loss,
-                        metrics=[as_loss])
-        
-        pc = ParamFCNetClassification(config=config, n_feat=X.shape[1],
-                                              n_classes=Y_gap.shape[1],
+        if False:
+            Y_gap = Y - np.repeat([np.min(Y, axis=1)], Y.shape[1], axis=0).T
+            Y_gap /= np.max(Y_gap)            
+            Y = Y_gap
+            
+            an = AutoNet(max_layers=5, n_classes=Y.shape[1])
+            config = an.fit(X_train=X, y_train=Y, X_valid=X, y_valid=Y, max_epochs=50, 
+                            runcount_limit=50, loss_func=as_loss,
+                            metrics=[as_loss])
+            
+            pc = ParamFCNetClassification(config=config, n_feat=X.shape[1],
+                                              n_classes=Y.shape[1],
                                               max_num_epochs=500,
                                               metrics=[as_loss],
                                               verbose=1)
-                
-        history = pc.train(X_train=X, y_train=Y_gap, X_valid=X,
-                           y_valid=Y_gap, n_epochs=500)
+        else:
+            Y_sel = np.argmin(Y, axis=1)
+            Y_hot = keras.utils.to_categorical(Y_sel, num_classes=Y.shape[0])
+            Y = Y_hot
+            
+            an = AutoNet(max_layers=5, n_classes=Y.shape[1])
+            config = an.fit(X_train=X, y_train=Y, X_valid=X, y_valid=Y, max_epochs=50, 
+                            runcount_limit=50)
+            
+            pc = ParamFCNetClassification(config=config, n_feat=X.shape[1],
+                                  n_classes=Y.shape[1],
+                                  max_num_epochs=500,
+                                  verbose=1)
+            
+        
+        history = pc.train(X_train=X, y_train=Y, X_valid=X,
+                           y_valid=Y, n_epochs=500)
 
         self.model = pc.model
         

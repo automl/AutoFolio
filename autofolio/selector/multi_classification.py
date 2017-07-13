@@ -97,8 +97,6 @@ class MultiClassifier(object):
 
         X = scenario.feature_data.values
         Y = self.classifier.predict(X) # vector of 0s and a single 1 for each instance
-        print(X)
-        print(Y[0,:])
         
         algo_indx = np.argmax(Y, axis=1)
         
