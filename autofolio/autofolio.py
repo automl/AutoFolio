@@ -290,7 +290,7 @@ class AutoFolio(object):
         # saved scenario is adapted to given feature vector
         feature_vec = np.array([feature_vec])
         scenario.feature_data = pd.DataFrame(
-            feature_vec, index=["pseudo_instance"], columns=scenario.feature_names)
+            feature_vec, index=["pseudo_instance"], columns=scenario.features)
         scenario.instances = ["pseudo_instance"]
         pred = self.predict(scenario=scenario, config=config,
                             feature_pre_pipeline=feature_pre_pipeline, pre_solver=pre_solver, selector=selector)
