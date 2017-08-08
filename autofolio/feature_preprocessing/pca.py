@@ -79,7 +79,7 @@ class PCAWrapper(object):
                 np.array(scenario.feature_data.values))
 
             scenario.feature_data = pd.DataFrame(
-                data=values, index=scenario.feature_data.index, columns=["f%d" % (i) for i in range(self.pca.n_components_)])
+                data=values, index=scenario.feature_data.index, columns=["f%d" % (i) for i in range(values.shape[1])])
 
         return scenario
 

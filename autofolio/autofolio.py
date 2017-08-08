@@ -323,9 +323,14 @@ class AutoFolio(object):
             msg = "Please ensure at least one feature group is allowed"
             raise ValueError(msg)
 
-        for fs in allowed_feature_groups:
+
+        if len(allowed_feature_groups) == 1: 
+            choices = [True] # if we only have one feature group, it has to be active 
+        else:
             choices = [True, False]
-            default = True
+        default = True
+
+        for fs in allowed_feature_groups:
             
             fs_param = CategoricalHyperparameter(name="fgroup_%s" % (fs),
                 choices=choices, default=default)
@@ -453,7 +458,7 @@ class AutoFolio(object):
                 perf = stats.show()
             except ValueError:
                 if scenario.performance_type[0] == "runtime":
-                    perf = scenario.algorithm_cutoff_time * 10
+                    perf = scenario.algorithm_cutoff_time * 20
                 else:
                     # try to impute a worst case perf
                     perf = scenario.performance_data.max().max()
