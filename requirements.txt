@@ -1,9 +1,9 @@
-ConfigSpace
+ConfigSpace<=0.3.10
 numpy
 scipy
 scikit-learn
 pandas
-smac
+smac<=0.5
 git+https://github.com/mlindauer/ASlibScenario
 xgboost
 sphinx_bootstrap_theme
