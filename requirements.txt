@@ -7,3 +7,4 @@ smac<=0.5
 git+https://github.com/mlindauer/ASlibScenario
 xgboost
 sphinx_bootstrap_theme
+pyrfr==0.4.0
