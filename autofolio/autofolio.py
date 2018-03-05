@@ -107,6 +107,10 @@ class AutoFolio(object):
             if args_.config is not None:
                 msg = "Reading yaml config file"
                 config = yaml.load(open(args_.config))
+            if not config.get("wallclock_limit"):
+                config["wallclock_limit"] = args_.wallclock_limit
+            if not config.get("runcount_limit"):
+                config["runcount_limit"] = args_.runcount_limit
 
             self.cs = self.get_cs(scenario, config)
 
@@ -116,7 +120,10 @@ class AutoFolio(object):
                 return 0
             
             if args_.tune:
-                config = self.get_tuned_config(scenario)
+                config = self.get_tuned_config(scenario,
+                                               wallclock_limit=args_.wallclock_limit,
+                                               runcount_limit=args_.runcount_limit,
+                                               autofolio_config=config)
             else:
                 config = self.cs.get_default_configuration()
             self.logger.debug(config)
@@ -398,6 +405,7 @@ class AutoFolio(object):
 
         # two days is 48 hours, 60 minutes each, 60 seconds each
         wallclock_limit = autofolio_config.get("wallclock_limit", wallclock_limit)
+        runcount_limit = autofolio_config.get("runcount_limit", runcount_limit)
 
         taf = ExecuteTAFuncDict(functools.partial(self.called_by_smac, scenario=scenario))
         max_fold = scenario.cv_data.max().max()
