@@ -67,8 +67,8 @@ behavior. It is given with the `--config` option.
 The recognized options and their types are as follows.
 
 * `wallclock_limit`. The amount of time (in seconds) for optimizing 
-  hyperparameters. Type: integer. Default: 2 days.
-
+  hyperparameters. Type: integer. Default: 300 seconds --- should be increased!
+  
 #### Feature groups
   
 * `allowed_feature_groups`. A list of the feature groups to consider for 
