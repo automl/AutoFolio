@@ -24,20 +24,11 @@ class PairwiseRegression(object):
             adds parameters to ConfigurationSpace 
         '''
 
-        try:
-            selector = cs.get_hyperparameter("selector")
-            selector.choices.append("PairwiseRegressor")
-            selector._num_choices += 1
-            selector.choices_vector = list(range(selector._num_choices))
-            selector._choices_set = set(selector.choices_vector)
-        except KeyError:
-            selector = CategoricalHyperparameter(
-                "selector", choices=["PairwiseRegressor"], default="PairwiseRegressor")
-            cs.add_hyperparameter(selector)
-            
+        selector = cs.get_hyperparameter("selector")
         regressor = cs.get_hyperparameter("regressor")
-        cond = InCondition(child=regressor, parent=selector, values=["PairwiseRegressor"])
-        cs.add_condition(cond)
+        if "PairwiseRegressor" in selector.choices:
+            cond = InCondition(child=regressor, parent=selector, values=["PairwiseRegressor"])
+            cs.add_condition(cond)
 
     def __init__(self, regressor_class):
         '''

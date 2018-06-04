@@ -25,9 +25,9 @@ class PCAWrapper(object):
             adds parameters to ConfigurationSpace 
         '''
         pca_switch = CategoricalHyperparameter(
-            "pca", choices=[True, False], default=False)
+            "pca", choices=[True, False], default_value=False)
         n_components = UniformIntegerHyperparameter(
-            "pca_n_components", lower=1, upper=20, default=7, log=True)
+            "pca_n_components", lower=1, upper=20, default_value=7, log=True)
         cs.add_hyperparameter(pca_switch)
         cs.add_hyperparameter(n_components)
         cond = InCondition(

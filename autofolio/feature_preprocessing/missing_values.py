@@ -24,7 +24,7 @@ class ImputerWrapper(object):
             adds parameters to ConfigurationSpace 
         '''
         stratgey = CategoricalHyperparameter(
-            "imputer_strategy", choices=["mean", "median", "most_frequent"], default="mean")
+            "imputer_strategy", choices=["mean", "median", "most_frequent"], default_value="mean")
         cs.add_hyperparameter(stratgey)
 
     def __init__(self):

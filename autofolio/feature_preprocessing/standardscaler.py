@@ -25,7 +25,7 @@ class StandardScalerWrapper(object):
             adds parameters to ConfigurationSpace 
         '''
         switch = CategoricalHyperparameter(
-            "StandardScaler", choices=[True, False], default=True)
+            "StandardScaler", choices=[True, False], default_value=True)
         cs.add_hyperparameter(switch)
 
     def __init__(self):

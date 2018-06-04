@@ -31,11 +31,15 @@ You should have received a copy of the 2-clause BSD license along with this prog
 ### Requirements
 
 AutoFolio runs with '''Python 3.5'''.
-Many of its dependencies can be fulfilled by using [Anaconda 3.4](https://www.continuum.io/).  
 
 To install (nearly) all requirements, please run:
 
-`pip install -r requirements.txt`
+`cat requirements.txt | xargs -n 1 -L 1 pip install`
+
+Many of its dependencies can be fulfilled by using [Anaconda >3.4](https://www.continuum.io/).
+If you use Anaconda as your Python environment, you have to install three packages before you can install SMAC (as one of AutoFolio's requirements):
+
+`conda install gxx_linux-64 gcc_linux-64 swig`
 
 To use pre-solving schedules, [clingo](http://potassco.sourceforge.net/) is required. We provide binary compiled under Ubuntu 14.04 which may not work under another OS. Please put a working `clingo` binary with Python support into the folder `aspeed/`.
  

@@ -1,10 +1,12 @@
-ConfigSpace<=0.3.10
+Cython
 numpy
 scipy
 scikit-learn
+matplotlib
 pandas
-smac<=0.5
-git+https://github.com/mlindauer/ASlibScenario
 xgboost
-sphinx_bootstrap_theme
-pyrfr==0.4.0
+ConfigSpace
+pyrfr
+smac
+git+https://github.com/mlindauer/ASlibScenario
+
