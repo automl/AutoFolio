@@ -22,54 +22,52 @@ class RandomForestRegressor(object):
         '''
             adds parameters to ConfigurationSpace 
         '''
+
         try:
             regressor = cs.get_hyperparameter("regressor")
-            regressor.choices.append("RandomForestRegressor")
-            regressor._num_choices += 1
-            regressor.choices_vector = list(range(regressor._num_choices))
-            regressor._choices_set = set(regressor.choices_vector)
-        except KeyError:
-            regressor = CategoricalHyperparameter(
-                "regressor", choices=["RandomForestRegressor"], default="RandomForestRegressor")
-            cs.add_hyperparameter(regressor)
+            if "RandomForestRegressor" not in regressor.choices:
+                return
 
-        n_estimators = UniformIntegerHyperparameter(
-            name="rfreg:n_estimators", lower=10, upper=100, default=10, log=True)
-        cs.add_hyperparameter(n_estimators)
-        max_features = CategoricalHyperparameter(
-            name="rfreg:max_features", choices=["sqrt", "log2", None], default="sqrt")
-        cs.add_hyperparameter(max_features)
-        max_depth = UniformIntegerHyperparameter(
-            name="rfreg:max_depth", lower=10, upper=2 ** 31, default=2 ** 31, log=True)
-        cs.add_hyperparameter(max_depth)
-        min_samples_split = UniformIntegerHyperparameter(
-            name="rfreg:min_samples_split", lower=2, upper=100, default=2, log=True)
-        cs.add_hyperparameter(min_samples_split)
-        min_samples_leaf = UniformIntegerHyperparameter(
-            name="rfreg:min_samples_leaf", lower=2, upper=100, default=10, log=True)
-        cs.add_hyperparameter(min_samples_leaf)
-        bootstrap = CategoricalHyperparameter(
-            name="rfreg:bootstrap", choices=[True, False], default=True)
-        cs.add_hyperparameter(bootstrap)
+            n_estimators = UniformIntegerHyperparameter(
+                name="rfreg:n_estimators", lower=10, upper=100, default_value=10, log=True)
+            cs.add_hyperparameter(n_estimators)
+            max_features = CategoricalHyperparameter(
+                name="rfreg:max_features", choices=["sqrt", "log2", None], default_value="sqrt")
+            cs.add_hyperparameter(max_features)
+            max_depth = UniformIntegerHyperparameter(
+                name="rfreg:max_depth", lower=10, upper=2 ** 31, default_value=2 ** 31, log=True)
+            cs.add_hyperparameter(max_depth)
+            min_samples_split = UniformIntegerHyperparameter(
+                name="rfreg:min_samples_split", lower=2, upper=100, default_value=2, log=True)
+            cs.add_hyperparameter(min_samples_split)
+            min_samples_leaf = UniformIntegerHyperparameter(
+                name="rfreg:min_samples_leaf", lower=2, upper=100, default_value=10, log=True)
+            cs.add_hyperparameter(min_samples_leaf)
+            bootstrap = CategoricalHyperparameter(
+                name="rfreg:bootstrap", choices=[True, False], default_value=True)
+            cs.add_hyperparameter(bootstrap)
 
-        cond = InCondition(
-            child=n_estimators, parent=regressor, values=["RandomForestRegressor"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=max_features, parent=regressor, values=["RandomForestRegressor"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=max_depth, parent=regressor, values=["RandomForestRegressor"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=min_samples_split, parent=regressor, values=["RandomForestRegressor"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=min_samples_leaf, parent=regressor, values=["RandomForestRegressor"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=bootstrap, parent=regressor, values=["RandomForestRegressor"])
-        cs.add_condition(cond)
+            cond = InCondition(
+                child=n_estimators, parent=regressor, values=["RandomForestRegressor"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=max_features, parent=regressor, values=["RandomForestRegressor"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=max_depth, parent=regressor, values=["RandomForestRegressor"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=min_samples_split, parent=regressor, values=["RandomForestRegressor"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=min_samples_leaf, parent=regressor, values=["RandomForestRegressor"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=bootstrap, parent=regressor, values=["RandomForestRegressor"])
+            cs.add_condition(cond)
+
+        except:
+            return
 
     def __init__(self):
         '''

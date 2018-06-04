@@ -105,12 +105,14 @@ class AutoFolio(object):
 
             config = {}
             if args_.config is not None:
-                msg = "Reading yaml config file"
+                self.logger.info("Reading yaml config file")
                 config = yaml.load(open(args_.config))
             if not config.get("wallclock_limit"):
                 config["wallclock_limit"] = args_.wallclock_limit
             if not config.get("runcount_limit"):
                 config["runcount_limit"] = args_.runcount_limit
+            if not config.get("output-dir"):
+                config["output-dir"] = args_.output_dir
 
             self.cs = self.get_cs(scenario, config)
 
@@ -340,7 +342,7 @@ class AutoFolio(object):
         for fs in allowed_feature_groups:
             
             fs_param = CategoricalHyperparameter(name="fgroup_%s" % (fs),
-                choices=choices, default=default)
+                choices=choices, default_value=default)
             self.cs.add_hyperparameter(fs_param)
 
         # preprocessing
@@ -359,20 +361,49 @@ class AutoFolio(object):
                 Aspeed.add_params(
                     cs=self.cs, cutoff=scenario.algorithm_cutoff_time)
 
-        # classifiers
-        if autofolio_config.get("random_forest_classifier", True):
-            RandomForest.add_params(self.cs)
-        
-        #if autofolio_config.get("xgboost_classifier", True):
-            XGBoost.add_params(self.cs)
-       
-        # regressors
-        if autofolio_config.get("random_forest_regressor", True):
-            RandomForestRegressor.add_params(self.cs)
+        if autofolio_config.get("classifier"):
+            # fix parameter
+            cls_choices = [autofolio_config["classifier"]]
+            cls_def = autofolio_config["classifier"]
+        else:
+            cls_choices = ["RandomForest","XGBoost"]
+            cls_def = "RandomForest"
+        classifier = CategoricalHyperparameter(
+                "classifier", choices=cls_choices, 
+                default_value=cls_def)
+
+        self.cs.add_hyperparameter(classifier)
+
+        RandomForest.add_params(self.cs)
+        XGBoost.add_params(self.cs)
+
+        if autofolio_config.get("regressor"):
+            # fix parameter
+            reg_choices = [autofolio_config["regressor"]]
+            reg_def = autofolio_config["regressor"]
+        else:
+            reg_choices = ["RandomForestRegressor"]
+            reg_def = "RandomForestRegressor"
+
+        regressor = CategoricalHyperparameter(
+                "regressor", choices=reg_choices, default_value=reg_def)
+        self.cs.add_hyperparameter(regressor)
+        RandomForestRegressor.add_params(self.cs)
 
         # selectors
+        if autofolio_config.get("selector"):
+            # fix parameter
+            sel_choices = [autofolio_config["selector"]]
+            sel_def = autofolio_config["selector"]
+        else:
+            sel_choices = ["PairwiseClassifier","PairwiseRegressor"]
+            sel_def = "PairwiseClassifier"
+            
+        selector = CategoricalHyperparameter(
+                "selector", choices=sel_choices, default_value=sel_def)
+        self.cs.add_hyperparameter(selector)
         PairwiseClassifier.add_params(self.cs)
-        PairwiseRegression.add_params(self.cs)       
+        PairwiseRegression.add_params(self.cs)  
 
         self.logger.debug(self.cs)
 
@@ -403,7 +434,6 @@ class AutoFolio(object):
                 best incumbent configuration found by SMAC
         '''
 
-        # two days is 48 hours, 60 minutes each, 60 seconds each
         wallclock_limit = autofolio_config.get("wallclock_limit", wallclock_limit)
         runcount_limit = autofolio_config.get("runcount_limit", runcount_limit)
 
@@ -412,13 +442,12 @@ class AutoFolio(object):
         max_fold = int(max_fold)
 
         ac_scenario = Scenario({"run_obj": "quality",  # we optimize quality
-                                # at most 10 function evaluations
                                 "runcount-limit": runcount_limit,
                                 "cs": self.cs,  # configuration space
                                 "deterministic": "true",
-                                "instances": [[i] for i in range(1, max_fold+1)],
+                                "instances": [[str(i)] for i in range(1, max_fold+1)],
                                 "wallclock-limit": wallclock_limit,
-                                "output-dir" : ""
+                                "output-dir" : "" if not autofolio_config.get("output-dir",None) else autofolio_config.get("output-dir") 
                                 })
 
         # necessary to use stats options related to scenario information
@@ -438,18 +467,18 @@ class AutoFolio(object):
 
         return incumbent
 
-    def called_by_smac(self, config: Configuration, scenario: ASlibScenario, instance=None, seed:int=1):
+    def called_by_smac(self, config: Configuration, scenario: ASlibScenario, instance:str=None, seed:int=1):
         '''
             run a cross fold validation based on the given data from cv.arff
 
             Arguments
             ---------
-            scenario: aslib_scenario.aslib_scenario.ASlibScenario
-                aslib scenario at hand
             config: Configuration
                 parameter configuration to use for preprocessing
-            folds: int
-                number of cv-splits
+            scenario: aslib_scenario.aslib_scenario.ASlibScenario
+                aslib scenario at hand
+            instance: str
+                cv-fold index 
             seed: int
                 random seed (not used)
                 

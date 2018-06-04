@@ -24,58 +24,55 @@ class RandomForest(object):
         '''
         try:
             classifier = cs.get_hyperparameter("classifier")
-            classifier.choices.append("RandomForest")
-            classifier._num_choices += 1
-            classifier.choices_vector = list(range(classifier._num_choices))
-            classifier._choices_set = set(classifier.choices_vector)
-        except KeyError:
-            classifier = CategoricalHyperparameter(
-                "classifier", choices=["RandomForest"], default="RandomForest")
-            cs.add_hyperparameter(classifier)
+            if "RandomForest" not in classifier.choices:
+                return
 
-        n_estimators = UniformIntegerHyperparameter(
-            name="rf:n_estimators", lower=10, upper=100, default=10, log=True)
-        cs.add_hyperparameter(n_estimators)
-        criterion = CategoricalHyperparameter(
-            name="rf:criterion", choices=["gini", "entropy"], default="gini")
-        cs.add_hyperparameter(criterion)
-        max_features = CategoricalHyperparameter(
-            name="rf:max_features", choices=["sqrt", "log2", None], default="sqrt")
-        cs.add_hyperparameter(max_features)
-        max_depth = UniformIntegerHyperparameter(
-            name="rf:max_depth", lower=10, upper=2**31, default=2**31, log=True)
-        cs.add_hyperparameter(max_depth)
-        min_samples_split = UniformIntegerHyperparameter(
-            name="rf:min_samples_split", lower=2, upper=100, default=2, log=True)
-        cs.add_hyperparameter(min_samples_split)
-        min_samples_leaf = UniformIntegerHyperparameter(
-            name="rf:min_samples_leaf", lower=2, upper=100, default=10, log=True)
-        cs.add_hyperparameter(min_samples_leaf)
-        bootstrap = CategoricalHyperparameter(
-            name="rf:bootstrap", choices=[True, False], default=True)
-        cs.add_hyperparameter(bootstrap)
+            n_estimators = UniformIntegerHyperparameter(
+                name="rf:n_estimators", lower=10, upper=100, default_value=10, log=True)
+            cs.add_hyperparameter(n_estimators)
+            criterion = CategoricalHyperparameter(
+                name="rf:criterion", choices=["gini", "entropy"], default_value="gini")
+            cs.add_hyperparameter(criterion)
+            max_features = CategoricalHyperparameter(
+                name="rf:max_features", choices=["sqrt", "log2", None], default_value="sqrt")
+            cs.add_hyperparameter(max_features)
+            max_depth = UniformIntegerHyperparameter(
+                name="rf:max_depth", lower=10, upper=2**31, default_value=2**31, log=True)
+            cs.add_hyperparameter(max_depth)
+            min_samples_split = UniformIntegerHyperparameter(
+                name="rf:min_samples_split", lower=2, upper=100, default_value=2, log=True)
+            cs.add_hyperparameter(min_samples_split)
+            min_samples_leaf = UniformIntegerHyperparameter(
+                name="rf:min_samples_leaf", lower=2, upper=100, default_value=10, log=True)
+            cs.add_hyperparameter(min_samples_leaf)
+            bootstrap = CategoricalHyperparameter(
+                name="rf:bootstrap", choices=[True, False], default_value=True)
+            cs.add_hyperparameter(bootstrap)
 
-        cond = InCondition(
-            child=n_estimators, parent=classifier, values=["RandomForest"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=criterion, parent=classifier, values=["RandomForest"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=max_features, parent=classifier, values=["RandomForest"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=max_depth, parent=classifier, values=["RandomForest"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=min_samples_split, parent=classifier, values=["RandomForest"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=min_samples_leaf, parent=classifier, values=["RandomForest"])
-        cs.add_condition(cond)
-        cond = InCondition(
-            child=bootstrap, parent=classifier, values=["RandomForest"])
-        cs.add_condition(cond)
+            cond = InCondition(
+                child=n_estimators, parent=classifier, values=["RandomForest"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=criterion, parent=classifier, values=["RandomForest"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=max_features, parent=classifier, values=["RandomForest"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=max_depth, parent=classifier, values=["RandomForest"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=min_samples_split, parent=classifier, values=["RandomForest"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=min_samples_leaf, parent=classifier, values=["RandomForest"])
+            cs.add_condition(cond)
+            cond = InCondition(
+                child=bootstrap, parent=classifier, values=["RandomForest"])
+            cs.add_condition(cond)
+        
+        except:
+            return
 
     def __init__(self):
         '''

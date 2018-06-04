@@ -1,15 +1,16 @@
 import os
 import setuptools
 
-requirements = ['ConfigSpace', 'numpy', 'scipy', 'scikit-learn', 'pandas', 'smac', 'xgboost']
-
 console_scripts = [
     'autofolio=autofolio.autofolio:main'
 ]
 
+with open("autofolio/__version__.py") as fh:
+    version = fh.readlines()[-1].split()[-1].strip("\"'")
+
 setuptools.setup(
     name="autofolio",
-    version="2.0.0",
+    version=version,
     author="Marius Lindauer",
     author_email="lindauer@cs.uni-freiburg.de",
     description=("AutoFolio 2, an automaticalliy configured algorithm selector."),
@@ -25,7 +26,6 @@ setuptools.setup(
         "License :: OSI Approved :: 2-clause BSD",
     ],
     platforms=['Linux'],
-    install_requires=requirements,
     tests_require=['mock',
                    'nose'],
     test_suite='nose.collector',

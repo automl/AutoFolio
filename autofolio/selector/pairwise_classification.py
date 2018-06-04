@@ -24,21 +24,12 @@ class PairwiseClassifier(object):
         '''
             adds parameters to ConfigurationSpace 
         '''
-
-        try:
-            selector = cs.get_hyperparameter("selector")
-            selector.choices.append("PairwiseClassifier")
-            selector._num_choices += 1
-            selector.choices_vector = list(range(selector._num_choices))
-            selector._choices_set = set(selector.choices_vector)
-        except KeyError:
-            selector = CategoricalHyperparameter(
-                "selector", choices=["PairwiseClassifier"], default="PairwiseClassifier")
-            cs.add_hyperparameter(selector)
-            
+        
+        selector = cs.get_hyperparameter("selector")
         classifier = cs.get_hyperparameter("classifier")
-        cond = InCondition(child=classifier, parent=selector, values=["PairwiseClassifier"])
-        cs.add_condition(cond)
+        if "PairwiseClassifier" in selector.choices:
+            cond = InCondition(child=classifier, parent=selector, values=["PairwiseClassifier"])
+            cs.add_condition(cond)
 
     def __init__(self, classifier_class):
         '''
