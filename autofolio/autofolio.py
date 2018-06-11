@@ -118,14 +118,15 @@ class AutoFolio(object):
 
             if args_.outer_cv:
                 self._outer_cv(scenario, config, args_.outer_cv_fold, 
-                    args_.out_template)
+                    args_.out_template, smac_seed=args_.smac_seed)
                 return 0
             
             if args_.tune:
                 config = self.get_tuned_config(scenario,
                                                wallclock_limit=args_.wallclock_limit,
                                                runcount_limit=args_.runcount_limit,
-                                               autofolio_config=config)
+                                               autofolio_config=config,
+                                               seed=args_.smac_seed)
             else:
                 config = self.cs.get_default_configuration()
             self.logger.debug(config)
@@ -139,7 +140,8 @@ class AutoFolio(object):
                 self.run_cv(config=config, scenario=scenario, folds=int(scenario.cv_data.max().max()))
     
     def _outer_cv(self, scenario: ASlibScenario, autofolio_config:dict=None, 
-            outer_cv_fold:int=None, out_template:str=None):
+            outer_cv_fold:int=None, out_template:str=None,
+            smac_seed:int=42):
         '''
             Evaluate on a scenario using an "outer" cross-fold validation
             scheme. In particular, this ensures that SMAC does not use the test
@@ -160,6 +162,9 @@ class AutoFolio(object):
                 If given, the learned configurations are written to the 
                 specified locations. The string is considered a template, and
                 "%fold%" will be replaced with the fold.
+
+            smac_seed:int 
+                random seed for SMAC
 
             Returns
             -------
@@ -190,7 +195,8 @@ class AutoFolio(object):
             # Use ‘AutoFolio.get_tuned_config()’ to tune on inner-cv
             config = self.get_tuned_config(
                 outer_training, 
-                autofolio_config=autofolio_config
+                autofolio_config=autofolio_config,
+                seed=smac_seed
             )
             
             # Use `AutoFolio.run_fold()’ to get the performance on the outer split
@@ -412,7 +418,8 @@ class AutoFolio(object):
     def get_tuned_config(self, scenario: ASlibScenario, 
                          runcount_limit:int=42,
                          wallclock_limit:int=300,
-                         autofolio_config:dict=dict()):
+                         autofolio_config:dict=dict(),
+                         seed:int=42):
         '''
             uses SMAC3 to determine a well-performing configuration in the configuration space self.cs on the given scenario
 
@@ -427,6 +434,8 @@ class AutoFolio(object):
                 (overwritten by autofolio_config)
             autofolio_config: dict, or None
                 An optional dictionary of configuration options
+            seed: int
+                random seed for SMAC
 
             Returns
             -------
@@ -460,7 +469,7 @@ class AutoFolio(object):
         self.logger.info(
             ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         smac = SMAC(scenario=ac_scenario, tae_runner=taf,
-                    rng=np.random.RandomState(42))
+                    rng=np.random.RandomState(seed))
         incumbent = smac.optimize()
 
         self.logger.info("Final Incumbent: %s" % (incumbent))
