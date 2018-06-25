@@ -148,7 +148,7 @@ class Validator(object):
 
         stat.oracle = test_scenario.performance_data.min(axis=1).sum()
         if train_scenario:
-            sbs = train_scenario.performance_data.sum(axis=0).argmin()
+            sbs = train_scenario.performance_data.sum(axis=0).idxmin()
             stat.sbs = test_scenario.performance_data.sum(axis=0)[sbs]
         
         ok_status = test_scenario.runstatus_data == "ok"
@@ -226,7 +226,7 @@ class Validator(object):
         
         stat.oracle = test_scenario.performance_data.min(axis=1).sum()
         if train_scenario:
-            sbs = train_scenario.performance_data.sum(axis=0).argmin()
+            sbs = train_scenario.performance_data.sum(axis=0).idxmin()
             stat.sbs = test_scenario.performance_data.sum(axis=0)[sbs]
         
         for inst, schedule in schedules.items():

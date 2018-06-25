@@ -41,6 +41,7 @@ from autofolio.selector.regressors.random_forest import RandomForestRegressor
 
 # selectors
 from autofolio.selector.pairwise_classification import PairwiseClassifier
+from autofolio.selector.multi_classification import MultiClassifier
 from autofolio.selector.pairwise_regression import PairwiseRegression
 
 # validation
@@ -754,7 +755,6 @@ class AutoFolio(object):
         '''
 
         if config.get("selector") == "PairwiseClassifier":
-
             clf_class = None
             if config.get("classifier") == "RandomForest":
                 clf_class = RandomForest
@@ -762,6 +762,16 @@ class AutoFolio(object):
                 clf_class = XGBoost
 
             selector = PairwiseClassifier(classifier_class=clf_class)
+            selector.fit(scenario=scenario, config=config)
+
+        if config.get("selector") == "MultiClassifier":
+            clf_class = None
+            if config.get("classifier") == "RandomForest":
+                clf_class = RandomForest
+            if config.get("classifier") == "XGBoost":
+                clf_class = XGBoost
+
+            selector = MultiClassifier(classifier_class=clf_class)
             selector.fit(scenario=scenario, config=config)
 
         if config.get("selector") == "PairwiseRegressor":
