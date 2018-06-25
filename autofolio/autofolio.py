@@ -42,6 +42,8 @@ from autofolio.selector.regressors.random_forest import RandomForestRegressor
 # selectors
 from autofolio.selector.pairwise_classification import PairwiseClassifier
 from autofolio.selector.multi_classification import MultiClassifier
+from autofolio.selector.ind_regression import IndRegression
+from autofolio.selector.joint_regression import JointRegression
 from autofolio.selector.pairwise_regression import PairwiseRegression
 
 # validation
@@ -772,6 +774,22 @@ class AutoFolio(object):
                 clf_class = XGBoost
 
             selector = MultiClassifier(classifier_class=clf_class)
+            selector.fit(scenario=scenario, config=config)
+
+        if config.get("selector") == "IndRegressor":
+            reg_class = None
+            if config.get("regressor") == "RandomForestRegressor":
+                reg_class = RandomForestRegressor
+                
+            selector = IndRegression(regressor_class=reg_class)
+            selector.fit(scenario=scenario, config=config)
+            
+        if config.get("selector") == "JointRegressor":
+            reg_class = None
+            if config.get("regressor") == "RandomForestRegressor":
+                reg_class = RandomForestRegressor
+                
+            selector = JointRegression(regressor_class=reg_class)
             selector.fit(scenario=scenario, config=config)
 
         if config.get("selector") == "PairwiseRegressor":
