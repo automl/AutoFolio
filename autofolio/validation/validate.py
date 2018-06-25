@@ -22,6 +22,8 @@ class Stats(object):
         self.solved = 0
         self.unsolvable = 0
         self.presolved_feats = 0
+        self.oracle = 0
+        self.sbs = 0
 
         self.runtime_cutoff = runtime_cutoff
         
@@ -53,14 +55,17 @@ class Stats(object):
             timeouts = self.timeouts - self.unsolvable
             par1 = self.par1 - (self.unsolvable * self.runtime_cutoff)
             par10 = self.par10 - (self.unsolvable * self.runtime_cutoff * 10)
+            oracle = self.oracle - (self.unsolvable * self.runtime_cutoff * 10)
+            sbs = self.sbs - (self.unsolvable * self.runtime_cutoff * 10)
         else:
             rm_string = "not removed"
             timeouts = self.timeouts
             par1 = self.par1
             par10 = self.par10
+            oracle = self.oracle
+            sbs = self.sbs
             
         if self.runtime_cutoff:
-
             n_samples = timeouts + self.solved
             self.logger.info("PAR1: %.4f" % (par1 / n_samples))
             self.logger.info("PAR10: %.4f" % (par10 / n_samples))
@@ -75,6 +80,10 @@ class Stats(object):
             self.logger.info("Average Solution Quality: %.4f" % (par1 / n_samples))
             par10 = par1
             
+        self.logger.info("Oracle: %.4f" %(oracle / n_samples))
+        if sbs > 0:
+            self.logger.info("Single Best: %.4f" %(sbs / n_samples))
+            self.logger.info("Normalized Score: %.4f" %( ( par10 - oracle) / (sbs - oracle)))
             
         self.logger.debug("Selection Frequency")
         for algo, n in self.selection_freq.items():
@@ -96,6 +105,8 @@ class Stats(object):
         self.solved += stat.solved
         self.unsolvable += stat.unsolvable
         self.presolved_feats += stat.presolved_feats
+        self.oracle += stat.oracle
+        self.sbs += stat.sbs
         
         for algo, n in stat.selection_freq.items():
             self.selection_freq[algo]  = self.selection_freq.get(algo, 0) + n
@@ -106,7 +117,8 @@ class Validator(object):
         ''' Constructor '''
         self.logger = logging.getLogger("Validation")
 
-    def validate_runtime(self, schedules: dict, test_scenario: ASlibScenario):
+    def validate_runtime(self, schedules: dict, test_scenario: ASlibScenario, 
+                         train_scenario: ASlibScenario=None):
         '''
             validate selected schedules on test instances for runtime
 
@@ -116,6 +128,9 @@ class Validator(object):
                 algorithm schedules per instance
             test_scenario: ASlibScenario
                 ASlib scenario with test instances
+            train_scnenario: ASlibScenario
+                ASlib scenario with training instances;
+                required for SBS score computation
         '''
         if test_scenario.performance_type[0] != "runtime":
             raise ValueError("Cannot validate non-runtime scenario with runtime validation method")
@@ -131,6 +146,11 @@ class Validator(object):
         feature_stati = test_scenario.feature_runstatus_data[
             test_scenario.used_feature_groups]
 
+        stat.oracle = test_scenario.performance_data.min(axis=1).sum()
+        if train_scenario:
+            sbs = train_scenario.performance_data.sum(axis=0).argmin()
+            stat.sbs = test_scenario.performance_data.sum(axis=0)[sbs]
+        
         ok_status = test_scenario.runstatus_data == "ok"
         unsolvable = ok_status.sum(axis=1) == 0
         stat.unsolvable += unsolvable.sum()
@@ -169,7 +189,7 @@ class Validator(object):
                     self.logger.debug("Solved by %s (budget: %f -- required to solve: %f)" % (algo, budget, time))
                     break
 
-                if used_time > test_scenario.algorithm_cutoff_time:
+                if used_time >= test_scenario.algorithm_cutoff_time:
                     stat.par1 += test_scenario.algorithm_cutoff_time
                     stat.timeouts += 1
                     self.logger.debug("Timeout after %d" % (used_time))
@@ -203,6 +223,11 @@ class Validator(object):
             self.logger.debug("Removing *-1 in performance data because of maximization")
         
         stat = Stats(runtime_cutoff=None)
+        
+        stat.oracle = test_scenario.performance_data.min(axis=1).sum()
+        if train_scenario:
+            sbs = train_scenario.performance_data.sum(axis=0).argmin()
+            stat.sbs = test_scenario.performance_data.sum(axis=0)[sbs]
         
         for inst, schedule in schedules.items():
             if len(schedule) > 1:
