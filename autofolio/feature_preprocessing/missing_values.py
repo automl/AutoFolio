@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from sklearn.preprocessing import Imputer
+from sklearn.impute import SimpleImputer
 
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
     UniformFloatHyperparameter, UniformIntegerHyperparameter
@@ -48,7 +48,7 @@ class ImputerWrapper(object):
                 configuration
         '''
 
-        self.imputer = Imputer(strategy=config.get("imputer_strategy"))
+        self.imputer = SimpleImputer(strategy=config.get("imputer_strategy"))
         self.imputer.fit(scenario.feature_data.values)
         self.active = True
 

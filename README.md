@@ -115,7 +115,7 @@ further use in an "inner" cross-validation to avoid overfitting.
 The `--outer-cv` flag indicates to use this mode. For example:
 
 ```
-autofolio -s aslib_data/BNSL-2016/ --outer-cv
+python3 scripts/autofolio -s examples/asp-aslib/data/ --outer-cv
 
 ```
 #### Saving the outer cross-validation choices
@@ -132,7 +132,7 @@ single quotes to avoid shell replacement in the template. (Double quotes will
 not typically work.)
 
 ```
-autofolio -s aslib_data/BNSL-2016/ --outer-cv --out-template 'bnsl.fold-${fold}.${type}'
+python3 scripts/autofolio -s examples/asp-aslib/data/ --outer-cv --out-template 'asp.fold-${fold}.${type}'
 
 ```
 #### Parallelizing the outer cross-validation
@@ -145,7 +145,7 @@ specifies which fold is used. Typically, this option would be combined with
 **N.B.** This number should range from 1 to 10 (not 0 to 9).
 
 ```
-autofolio -s aslib_data/BNSL-2016/ --outer-cv --outer-cv-fold 1 --out-template 'bnsl.fold-${fold}.${type}'
+python3 scripts/autofolio -s examples/asp-aslib/data/ --outer-cv --outer-cv-fold 1 --out-template 'asp.fold-${fold}.${type}'
 ```
 
 
