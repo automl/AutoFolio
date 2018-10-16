@@ -202,7 +202,8 @@ class Validator(object):
 
         return stat
 
-    def validate_quality(self, schedules: dict, test_scenario: ASlibScenario):
+    def validate_quality(self, schedules: dict, test_scenario: ASlibScenario, 
+                         train_scenario: ASlibScenario=None):
         '''
             validate selected schedules on test instances for solution quality
 
@@ -212,6 +213,9 @@ class Validator(object):
                 algorithm schedules per instance
             test_scenario: ASlibScenario
                 ASlib scenario with test instances
+            train_scnenario: ASlibScenario
+                ASlib scenario with training instances;
+                required for SBS score computation
         '''
         if test_scenario.performance_type[0] != "solution_quality":
             raise ValueError("Cannot validate non-solution_quality scenario with solution_quality validation method")
