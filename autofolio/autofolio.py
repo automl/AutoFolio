@@ -88,8 +88,9 @@ class AutoFolio(object):
         self._root_logger.setLevel(args_.verbose)
 
         if args_.load:
-            self.read_model_and_predict(
+            pred = self.read_model_and_predict(
                 model_fn=args_.load, feature_vec=list(map(float, args_.feature_vec)))
+            print("Selected Schedule [(algorithm, budget)]: %s" % (pred))
 
         else:
 
@@ -313,8 +314,7 @@ class AutoFolio(object):
         pred = self.predict(scenario=scenario, config=config,
                             feature_pre_pipeline=feature_pre_pipeline, pre_solver=pre_solver, selector=selector)
 
-        print("Selected Schedule [(algorithm, budget)]: %s" % (
-            pred["pseudo_instance"]))
+        return pred["pseudo_instance"]
 
     def get_cs(self, scenario: ASlibScenario, autofolio_config:dict=None):
         '''
