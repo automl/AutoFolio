@@ -90,7 +90,7 @@ class AutoFolio(object):
         if args_.load:
             pred = self.read_model_and_predict(
                 model_fn=args_.load, feature_vec=list(map(float, args_.feature_vec)))
-            print("Selected Schedule (algorithm, budget): %s" % (pred))
+            print("Selected Schedule [(algorithm, budget)]: %s" % (pred))
 
         else:
 
@@ -298,8 +298,8 @@ class AutoFolio(object):
 
             Returns
             -------
-            tuple
-                Selected schedule (algorithm, budget)
+            list of tuple
+                Selected schedule [(algorithm, budget)]
         '''
         with open(model_fn, "br") as fp:
             scenario, feature_pre_pipeline, pre_solver, selector, config = pickle.load(
@@ -319,7 +319,7 @@ class AutoFolio(object):
         pred = self.predict(scenario=scenario, config=config,
                             feature_pre_pipeline=feature_pre_pipeline, pre_solver=pre_solver, selector=selector)
 
-        return pred["pseudo_instance"][0]
+        return pred["pseudo_instance"]
 
     def get_cs(self, scenario: ASlibScenario, autofolio_config:dict=None):
         '''
