@@ -220,8 +220,8 @@ class AutoFolio(object):
 
             # save the model, if given an output location
             if out_template is not None:
-                out_template = string.Template(out_template)
-                model_fn = out_template.substitute(fold=cv_fold, type="pkl")
+                out_template_ = string.Template(out_template)
+                model_fn = out_template_.substitute(fold=cv_fold, type="pkl")
                 
                 msg = "Writing model to: {}".format(model_fn)
                 self.logger.info(msg)
@@ -246,7 +246,7 @@ class AutoFolio(object):
                 # and x[0][0] gets the name of the solver from that pair
                 schedule_df['solver'] = schedule_df['solver'].apply(lambda x: x[0][0])
 
-                selections_fn = out_template.substitute(fold=cv_fold, type="csv")
+                selections_fn = out_template_.substitute(fold=cv_fold, type="csv")
 
                 msg = "Writing solver choices to: {}".format(selections_fn)
                 self.logger.info(msg)
