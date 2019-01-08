@@ -156,7 +156,9 @@ you need to train AutoFolio save its internal state to disk (use `python3 script
 To predict on a new instance,
 please run
 
-`python3 scripts/autofolio --load [filename] --feature_vec [space-separated feature vector]`
+`python3 scripts/autofolio --load [filename] --feature_vec "[space-separated feature vector]"`
+
+Please note that the quotes around the feature vector are important.
 
 ### Self-Tuning Mode
 

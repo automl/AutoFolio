@@ -89,7 +89,7 @@ class AutoFolio(object):
 
         if args_.load:
             pred = self.read_model_and_predict(
-                model_fn=args_.load, feature_vec=list(map(float, args_.feature_vec)))
+                model_fn=args_.load, feature_vec=list(map(float, args_.feature_vec.split(" "))))
             print("Selected Schedule [(algorithm, budget)]: %s" % (pred))
 
         else:

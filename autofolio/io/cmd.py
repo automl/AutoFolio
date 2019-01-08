@@ -56,7 +56,7 @@ class CMDParser(object):
                          help="trains AutoFolio and saves AutoFolio's state in the given filename")
         opt.add_argument("--load", type=str, default=None,
                          help="loads model (from --save); other modes are disabled with this options")
-        opt.add_argument("--feature_vec", default=None, nargs="*",
+        opt.add_argument("--feature_vec", default=None, type=str,
                          help="feature vector to predict algorithm to use -- has to be used in combination with --load")
 
         opt.add_argument("--config", type=str, default=None,
