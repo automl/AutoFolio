@@ -222,16 +222,18 @@ class Validator(object):
         
         self.logger.debug("FYI: Feature costs and algorithm runstatus is ignored")
         
-        if test_scenario.maximize[0]:
-            test_scenario.performance_data *= -1
-            self.logger.debug("Removing *-1 in performance data because of maximization")
-        
         stat = Stats(runtime_cutoff=None)
         
         stat.oracle = test_scenario.performance_data.min(axis=1).sum()
         if train_scenario:
             sbs = train_scenario.performance_data.sum(axis=0).idxmin()
             stat.sbs = test_scenario.performance_data.sum(axis=0)[sbs]
+
+        if test_scenario.maximize[0]:
+            test_scenario.performance_data *= -1
+            self.logger.debug("Removing *-1 in performance data because of maximization")
+            stat.sbs *= -1
+            stat.oracle *= -1
         
         for inst, schedule in schedules.items():
             if len(schedule) > 1:
