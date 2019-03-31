@@ -32,7 +32,7 @@ class RandomForestRegressor(object):
                 name="rfreg:n_estimators", lower=10, upper=100, default_value=10, log=True)
             cs.add_hyperparameter(n_estimators)
             max_features = CategoricalHyperparameter(
-                name="rfreg:max_features", choices=["sqrt", "log2", None], default_value="sqrt")
+                name="rfreg:max_features", choices=["sqrt", "log2", "None"], default_value="sqrt")
             cs.add_hyperparameter(max_features)
             max_depth = UniformIntegerHyperparameter(
                 name="rfreg:max_depth", lower=10, upper=2 ** 31, default_value=2 ** 31, log=True)
@@ -98,7 +98,8 @@ class RandomForestRegressor(object):
 
         self.model = sklearn.ensemble.RandomForestRegressor(n_estimators=config["rfreg:n_estimators"],
                                             max_features=config[
-                                                "rfreg:max_features"],
+                                                "rfreg:max_features"] if config[
+                                                "rfreg:max_features"] != "None" else None,
                                             max_depth=config["rf:max_depth"],
                                             min_samples_split=config[
                                                 "rfreg:min_samples_split"],

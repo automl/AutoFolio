@@ -34,7 +34,7 @@ class RandomForest(object):
                 name="rf:criterion", choices=["gini", "entropy"], default_value="gini")
             cs.add_hyperparameter(criterion)
             max_features = CategoricalHyperparameter(
-                name="rf:max_features", choices=["sqrt", "log2", None], default_value="sqrt")
+                name="rf:max_features", choices=["sqrt", "log2", "None"], default_value="sqrt")
             cs.add_hyperparameter(max_features)
             max_depth = UniformIntegerHyperparameter(
                 name="rf:max_depth", lower=10, upper=2**31, default_value=2**31, log=True)
@@ -70,7 +70,7 @@ class RandomForest(object):
             cond = InCondition(
                 child=bootstrap, parent=classifier, values=["RandomForest"])
             cs.add_condition(cond)
-        
+            print(cs)
         except:
             return
 
@@ -102,8 +102,9 @@ class RandomForest(object):
         '''
 
         self.model = RandomForestClassifier(n_estimators=config["rf:n_estimators"],
-                                            max_features=config[
-                                                "rf:max_features"],
+                                            max_features= config[
+                                                "rf:max_features"] if config[
+                                                "rf:max_features"] != "None" else None,
                                             criterion=config["rf:criterion"],
                                             max_depth=config["rf:max_depth"],
                                             min_samples_split=config[
