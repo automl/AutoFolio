@@ -18,7 +18,7 @@ from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
 from smac.tae.execute_func import ExecuteTAFuncDict
 from smac.scenario.scenario import Scenario
 from smac.stats.stats import Stats as AC_Stats
-from smac.facade.smac_facade import SMAC
+from smac.facade.smac_hpo_facade import SMAC4HPO as SMAC
 
 from autofolio.io.cmd import CMDParser
 from aslib_scenario.aslib_scenario import ASlibScenario
@@ -454,7 +454,7 @@ class AutoFolio(object):
         wallclock_limit = autofolio_config.get("wallclock_limit", wallclock_limit)
         runcount_limit = autofolio_config.get("runcount_limit", runcount_limit)
 
-        taf = ExecuteTAFuncDict(functools.partial(self.called_by_smac, scenario=scenario))
+        taf = functools.partial(self.called_by_smac, scenario=scenario)
         max_fold = scenario.cv_data.max().max()
         max_fold = int(max_fold)
 
