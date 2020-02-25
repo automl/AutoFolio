@@ -51,7 +51,7 @@ from autofolio.validation.validate import Validator, Stats
 
 __author__ = "Marius Lindauer"
 __license__ = "BSD"
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 
 class AutoFolio(object):
@@ -107,6 +107,16 @@ class AutoFolio(object):
             else:
                 raise ValueError("Missing inputs to read scenario data.")
 
+            test_scenario = None
+            if args_.performance_test_csv and args_.feature_test_csv:
+                test_scenario = ASlibScenario()
+                test_scenario.read_from_csv(perf_fn=args_.performance_test_csv,
+                                       feat_fn=args_.feature_test_csv,
+                                       objective=args_.objective,
+                                       runtime_cutoff=args_.runtime_cutoff,
+                                       maximize=args_.maximize,
+                                       cv_fn=None)
+
             config = {}
             if args_.config is not None:
                 self.logger.info("Reading yaml config file")
@@ -142,7 +152,14 @@ class AutoFolio(object):
                     args_.save, scenario, feature_pre_pipeline, pre_solver, selector, config)
             else:
                 self.run_cv(config=config, scenario=scenario, folds=int(scenario.cv_data.max().max()))
-    
+
+            if test_scenario is not None:
+                stats = self.run_fold(config=config,
+                                      fold=0,
+                                      return_fit=False,
+                                      scenario=scenario,
+                                      test_scenario=test_scenario)
+
     def _outer_cv(self, scenario: ASlibScenario, autofolio_config:dict=None, 
             outer_cv_fold:int=None, out_template:str=None,
             smac_seed:int=42):
@@ -562,7 +579,7 @@ class AutoFolio(object):
 
         return par10
 
-    def run_fold(self, config: Configuration, scenario:ASlibScenario, fold:int, return_fit:bool=False):
+    def run_fold(self, config: Configuration, scenario:ASlibScenario, fold:int, test_scenario=None, return_fit:bool=False):
         '''
             run a given fold of cross validation
             
@@ -574,6 +591,9 @@ class AutoFolio(object):
                 parameter configuration to use for preprocessing
             fold: int
                 fold id
+            test_scenario:aslib_scenario.aslib_scenario.ASlibScenario
+                aslib scenario with test data for validation
+                generated from <scenario> if None
 
             return_fit: bool
                 optionally, the learned preprocessing options, presolver and
@@ -593,9 +613,13 @@ class AutoFolio(object):
                 
                 
         '''
-        self.logger.info("CV-Iteration: %d" % (fold))
-        
-        test_scenario, training_scenario = scenario.get_split(indx=fold)
+
+        if test_scenario is None:
+            self.logger.info("CV-Iteration: %d" % (fold))
+            test_scenario, training_scenario = scenario.get_split(indx=fold)
+        else:
+            self.logger.info("Validation on test data")
+            training_scenario = scenario
 
         feature_pre_pipeline, pre_solver, selector = self.fit(
             scenario=training_scenario, config=config)
@@ -611,7 +635,7 @@ class AutoFolio(object):
             stats = val.validate_quality(
                 schedules=schedules, test_scenario=test_scenario, train_scenario=training_scenario)
         else:
-            raise ValueError("Unknown: %s" %(performance_type[0]))
+            raise ValueError("Unknown: %s" %(scenario.performance_type[0]))
         
         if return_fit:
             return stats, (feature_pre_pipeline, pre_solver, selector), schedules

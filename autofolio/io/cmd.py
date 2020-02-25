@@ -29,6 +29,10 @@ class CMDParser(object):
                          help="performance data in csv table (column: algorithm, row: instance, delimeter: ,)")
         csv.add_argument("--feature_csv", default=None,
                          help="instance features data in csv table (column: features, row: instance, delimeter: ,)")
+        csv.add_argument("--performance_test_csv", default=None,
+                         help="performance *test* data in csv table (column: algorithm, row: instance, delimeter: ,)")
+        csv.add_argument("--feature_test_csv", default=None,
+                         help="instance *test* features data in csv table (column: features, row: instance, delimeter: ,)")
         csv.add_argument("--cv_csv", default=None,
                          help="cross validation splits in csv table (column: split ID, row: instance, delimeter: ,)")
         csv.add_argument("--objective", default="solution_quality", choices=[
