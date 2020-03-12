@@ -51,7 +51,7 @@ from autofolio.validation.validate import Validator, Stats
 
 __author__ = "Marius Lindauer"
 __license__ = "BSD"
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 
 class AutoFolio(object):
