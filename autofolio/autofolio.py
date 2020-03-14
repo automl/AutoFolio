@@ -15,10 +15,13 @@ from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
     UniformFloatHyperparameter, UniformIntegerHyperparameter
 
 # SMAC3
-from smac.tae.execute_func import ExecuteTAFuncDict
-from smac.scenario.scenario import Scenario
-from smac.stats.stats import Stats as AC_Stats
-from smac.facade.smac_hpo_facade import SMAC4HPO as SMAC
+try:
+    from smac.tae.execute_func import ExecuteTAFuncDict
+    from smac.scenario.scenario import Scenario
+    from smac.stats.stats import Stats as AC_Stats
+    from smac.facade.smac_hpo_facade import SMAC4HPO as SMAC
+except ImportError:
+    pass
 
 from autofolio.io.cmd import CMDParser
 from aslib_scenario.aslib_scenario import ASlibScenario
