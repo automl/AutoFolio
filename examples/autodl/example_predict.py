@@ -6,9 +6,6 @@ __author__ = "Marius Lindauer"
 __license__ = "BSD"
 __version__ = "2.1.0"
 
-perf_fn = "perf_matrix.csv"
-feat_fn = "meta_features.csv"
-
 # will be created (or overwritten) by AutoFolio
 model_fn = "af_model_final.pkl"
 
