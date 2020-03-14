@@ -14,11 +14,18 @@ feat_fn = "/home/lindauer/git/AutoDLComp19/src/meta_features/non-nn/old_data/met
 # will be created (or overwritten) by AutoFolio
 old_model_fn = "af_model.pkl"
 new_model_fn = "af_model_final.pkl"
+config_fn = "config.pkl"
 
 af = AFCsvFacade(perf_fn=perf_fn, feat_fn=feat_fn)
 
-with open(old_model_fn, "br") as fp:
-    _, _, _, _, config = pickle.load(fp)
+#with open(old_model_fn, "br") as fp:
+#_, _, _, _, config = pickle.load(fp)
+
+#with open(config_fn, "bw") as fp:
+#    pickle.dump(config, fp)
+
+with open(config_fn, "br") as fp:
+    config = pickle.load(fp)
 
 print(config)
 
