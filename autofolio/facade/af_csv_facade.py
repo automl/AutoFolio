@@ -1,5 +1,8 @@
+import pandas as pd
 import numpy as np
 import logging
+import copy
+
 
 from ConfigSpace.configuration_space import Configuration
 from aslib_scenario.aslib_scenario import ASlibScenario
@@ -35,19 +38,36 @@ class AFCsvFacade(object):
         self.af = AutoFolio(random_seed=seed)
         self.logger = logging.getLogger("AF Facade")
 
+        self.feature_pre_pipeline = None
+        self.pre_solver = None
+        self.selector = None
+        self.config = None
+        self.cs = None
+
+
     def fit(self,
             config:Configuration=None,
             save_fn:str = None):
         """ Train AutoFolio on data from init"""
         self.logger.info("Fit")
+        cs = self.af.get_cs(self.scenario, {})
+        self.cs = cs
         if config is None:
-            cs = self.af.get_cs(self.scenario, {})
             config = cs.get_default_configuration()
+        else:
+            config = Configuration(configuration_space=cs,
+                                   values=config)
+
         feature_pre_pipeline, pre_solver, selector = self.af.fit(scenario=self.scenario, config=config)
+
+        self.feature_pre_pipeline = feature_pre_pipeline
+        self.pre_solver = pre_solver
+        self.selector = selector
+        self.config = config
 
         if save_fn:
             self.af._save_model(save_fn, self.scenario, feature_pre_pipeline, pre_solver, selector, config)
-        self.logger.info("AutoFolio model saved to %s" %(save_fn))
+            self.logger.info("AutoFolio model saved to %s" %(save_fn))
 
     def tune(self,
              wallclock_limit:int = 1200,
@@ -68,6 +88,20 @@ class AFCsvFacade(object):
         self.logger.info("AF's final performance %f" %(score))
 
         return score
+
+    def predict(self, vec):
+
+        scenario = copy.deepcopy(self.scenario)
+        feature_vec = np.array([vec])
+        scenario.feature_data = pd.DataFrame(
+            feature_vec, index=["pseudo_instance"], columns=scenario.features)
+        scenario.instances = ["pseudo_instance"]
+
+        return self.af.predict(scenario=scenario,
+                               config=self.config,
+                               feature_pre_pipeline=self.feature_pre_pipeline,
+                               pre_solver=self.pre_solver,
+                               selector=self.selector)
 
     @staticmethod
     def load_and_predict(vec: np.ndarray,
