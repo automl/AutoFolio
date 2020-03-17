@@ -7,8 +7,8 @@ __author__ = "Marius Lindauer"
 __license__ = "BSD"
 __version__ = "2.1.0"
 
-perf_fn = "/home/lindauer/git/AutoDLComp19/experiments/new_config_space_after_March_4/eval_new_cs_old_data_approx_600/perf_matrix.csv"
-feat_fn = "/home/lindauer/git/AutoDLComp19/src/meta_features/non-nn/old_data/meta_features.csv"
+perf_fn = "perf_matrix.csv"
+feat_fn = "meta_features.csv"
 
 af = AFCsvFacade(perf_fn=perf_fn, feat_fn=feat_fn)
 
