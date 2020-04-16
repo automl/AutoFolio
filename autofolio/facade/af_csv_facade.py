@@ -97,11 +97,12 @@ class AFCsvFacade(object):
             feature_vec, index=["pseudo_instance"], columns=scenario.features)
         scenario.instances = ["pseudo_instance"]
 
-        return self.af.predict(scenario=scenario,
+        pred = self.af.predict(scenario=scenario,
                                config=self.config,
                                feature_pre_pipeline=self.feature_pre_pipeline,
                                pre_solver=self.pre_solver,
                                selector=self.selector)
+        return pred["pseudo_instance"][0][0]
 
     @staticmethod
     def load_and_predict(vec: np.ndarray,
