@@ -87,6 +87,7 @@ class Stats(object):
             self.logger.info("Number of instances: %d" %(n_samples))
             self.logger.info("Average Solution Quality: %.4f" % (par1 / n_samples))
             par10 = par1
+            par10_out = par10 / n_samples
 
         if n_samples == 0:
             oracle_out = sys.maxsize
