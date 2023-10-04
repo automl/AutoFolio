@@ -100,7 +100,7 @@ class RandomForestRegressor(object):
                                             max_features=config[
                                                 "rfreg:max_features"] if config[
                                                 "rfreg:max_features"] != "None" else None,
-                                            max_depth=config["rf:max_depth"],
+                                            max_depth=config["rfreg:max_depth"],
                                             min_samples_split=config[
                                                 "rfreg:min_samples_split"],
                                             min_samples_leaf=config[
