@@ -378,7 +378,7 @@ class AutoFolio(object):
 
         # preprocessing
         if autofolio_config.get("pca", True):
-            PCAWrapper.add_params(self.cs)
+            PCAWrapper.add_params(self.cs, scenario)
 
         if autofolio_config.get("impute", True):
             ImputerWrapper.add_params(self.cs)

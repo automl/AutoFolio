@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from aslib_scenario.aslib_scenario import ASlibScenario
 
@@ -67,8 +68,15 @@ class Stats(object):
             
         if self.runtime_cutoff:
             n_samples = timeouts + self.solved
-            self.logger.info("PAR1: %.4f" % (par1 / n_samples))
-            self.logger.info("PAR10: %.4f" % (par10 / n_samples))
+            self.logger.debug("n_samples = timeouts + self.solved: %d" % n_samples)
+            if n_samples == 0:
+                par1_out = sys.maxsize
+                par10_out = sys.maxsize
+            else:
+                par1_out = par1 / n_samples
+                par10_out = par10 / n_samples
+            self.logger.info("PAR1: %.4f" % (par1_out))
+            self.logger.info("PAR10: %.4f" % (par10_out))
             self.logger.info("Timeouts: %d / %d" % (timeouts, n_samples))
             self.logger.info("Presolved during feature computation: %d / %d" % (self.presolved_feats, n_samples))
             self.logger.info("Solved: %d / %d" % (self.solved, n_samples))
@@ -79,17 +87,27 @@ class Stats(object):
             self.logger.info("Number of instances: %d" %(n_samples))
             self.logger.info("Average Solution Quality: %.4f" % (par1 / n_samples))
             par10 = par1
-            
-        self.logger.info("Oracle: %.4f" %(oracle / n_samples))
+            par10_out = par10 / n_samples
+
+        if n_samples == 0:
+            oracle_out = sys.maxsize
+        else:
+            oracle_out = oracle / n_samples
+        self.logger.info("Oracle: %.4f" %(oracle_out))
         if sbs > 0:
             self.logger.info("Single Best: %.4f" %(sbs / n_samples))
+        if (sbs - oracle) > 0:
             self.logger.info("Normalized Score: %.4f" %( ( par10 - oracle) / (sbs - oracle)))
             
         self.logger.debug("Selection Frequency")
         for algo, n in self.selection_freq.items():
-            self.logger.debug("%s: %.2f" %(algo, n/(timeouts + self.solved)))
+            if (timeouts + self.solved) == 0:
+                frequency = 0
+            else:
+                frequency = n / (timeouts + self.solved)
+            self.logger.debug("%s: %.2f" %(algo, frequency))
             
-        return par10 / n_samples
+        return par10_out
 
     def merge(self, stat):
         '''
